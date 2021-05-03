@@ -423,10 +423,13 @@ TclReadlineCmd(ClientData clientData, Tcl_Interp *interp, int objc,
             break;
 
         case TCLRL_UPDATE:
-            if (objc != 2) {
-                Tcl_WrongNumArgs(interp, 2, objv, "");
+            if (objc > 3) {
+                Tcl_WrongNumArgs(interp, 2, objv, "?prompt?");
                 return TCL_ERROR;
             }
+			if (3 == objc) {
+				rl_set_prompt(Tcl_GetString(objv[2]));
+			}
 
             /* Update the input line */
 
