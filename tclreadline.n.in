@@ -185,8 +185,9 @@ Ring the terminal bell, obeying the setting of bell-style
 Return the current input.
 
 .TP 5
-\fB::tclreadline::readline update\fP
-Redraw the current input line.
+\fB::tclreadline::readline update ?prompt?\fP
+Redraw the current input line.  If \fIprompt\fP is supplied, update
+the prompt before redrawing.
 
 .TP 5
 \fB::tclreadline::Print\fP [\fIyes / no\fP]
