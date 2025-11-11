@@ -177,10 +177,10 @@ GDB		= gdb
 VALGRIND	= valgrind
 VALGRINDARGS	= --tool=memcheck --num-callers=8 --leak-resolution=high \
 		  --leak-check=yes -v --suppressions=suppressions --keep-debuginfo=yes \
-		  --trace-children=yes --error-exitcode=2 $(VALGRINDEXTRA)
+		  --trace-children=no --error-exitcode=2 $(VALGRINDEXTRA)
 
 PACKAGE_LOAD = "apply {dir {source [file join \$$dir pkgIndex.tcl]; package require @PACKAGE_NAME@ @PACKAGE_VERSION@}} `@CYGPATH@ $(srcdir)`"
-PACKAGE_LOAD_EMBED = apply\ {dir\ {source\ [file\ join\ \$$dir\ pkgIndex.tcl];\ package\ require\ @PACKAGE_NAME@\ @PACKAGE_VERSION@}}\ `@CYGPATH@ $(srcdir)`
+PACKAGE_LOAD_EMBED = apply\ {source\ [file\ join\ \$$dir\ pkgIndex.tcl];\ package\ require\ @PACKAGE_NAME@\ @PACKAGE_VERSION@}}\ `@CYGPATH@ $(srcdir)`
 
 .SUFFIXES: .c .$(OBJEXT)
 
@@ -252,9 +252,8 @@ install-doc: doc
 	done
 
 test: binaries libraries
-	$(TCLSH) `@CYGPATH@ $(srcdir)/tests/all.tcl` $(TESTFLAGS) \
-	    -load "package ifneeded $(PACKAGE_NAME) $(PACKAGE_VERSION) \
-		[list load `@CYGPATH@ $(PKG_LIB_FILE)` [string totitle $(PACKAGE_NAME)]]"
+	ERROR_ON_FAILURES=1 $(TCLSH) `@CYGPATH@ $(srcdir)/tests/all.tcl` $(TESTFLAGS) \
+	    -load $(PACKAGE_LOAD)
 
 shell: binaries libraries
 	@$(TCLSH) $(SCRIPT)

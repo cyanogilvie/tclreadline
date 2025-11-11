@@ -8,3 +8,9 @@ config.status
 /generic/tclreadline.h
 /doc/tclreadline.n
 /Makefile
+autom4te.cache
+/configure
+*~
+/manifest.uuid
+/tclreadlineUuid.h
+/tags

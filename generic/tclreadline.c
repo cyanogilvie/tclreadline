@@ -623,6 +623,9 @@ Tclreadline_Init(Tcl_Interp *interp)
     }
     Tcl_CreateObjCommand(interp, "::tclreadline::readline", TclReadlineCmd,
         (ClientData) NULL, (Tcl_CmdDeleteProc *) NULL);
+
+    Tcl_CreateObjCommand(interp, "::tclreadline::build-info", BuildInfoObjCmd, NULL, NULL);
+
     tclrl_interp = interp;
     if (TCL_OK != (status = Tcl_LinkVar(interp, "::tclreadline::historyLength",
             (char*) &tclrl_history_length, TCL_LINK_INT)))

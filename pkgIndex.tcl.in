@@ -31,6 +31,8 @@ package ifneeded @PACKAGE_NAME@ @PACKAGE_VERSION@ \
 
                 set ::auto_index(::tclreadline::ScriptCompleter) \
                     [list source [file normalize [file join $dir tclreadlineCompleter.tcl]]]
+
+                source [file join $dir tclreadlineSetup.tcl]
                 return
             }
         }

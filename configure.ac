@@ -188,95 +188,96 @@ AC_CHECK_HEADERS([string.h])
 
 AC_CHECK_FUNCS([sigaction])
 
-# check for readline's rl_executing_macro
-# (could be macro.c's private variable _rl_executing_macro).
+# TODO: port these checks:
+## check for readline's rl_executing_macro
+## (could be macro.c's private variable _rl_executing_macro).
+#
+#AC_CHECK_DECL(rl_executing_macro
+#, AC_DEFINE(EXECUTING_MACRO_NAME, rl_executing_macro,
+#  [ Define the name of the executing macro variable in libreadline. ])
+#, AC_MSG_CHECKING([for _rl_executing_macro in -lreadline])
+#  AC_LINK_IFELSE([AC_LANG_PROGRAM([[]], [[
+#    extern char* _rl_executing_macro;
+#    _rl_executing_macro = (char*) 0;
+#  
+#  ]])],[AC_MSG_RESULT(yes)
+#    AC_DEFINE(EXECUTING_MACRO_HACK, 1,
+#     Define if EXECUTING_MACRO_NAME is resolved in libreadline. )
+#    AC_DEFINE(EXECUTING_MACRO_NAME, _rl_executing_macro,
+#     Define the name of the executing macro variable in libreadline. )
+#  ],[AC_MSG_RESULT(no)])
+#, [AC_INCLUDES_DEFAULT
+##include "$READLINE_INCLUDE_DIR/readline.h"])
+#
+## check for readline's rl_cleanup_after_signal
+#
+#AC_MSG_CHECKING([for rl_cleanup_after_signal() in -lreadline])
+#AC_LINK_IFELSE([AC_LANG_PROGRAM([[]], [[
+#    extern void rl_cleanup_after_signal();
+#    rl_cleanup_after_signal();
+#]])],[AC_MSG_RESULT(yes);
+#    AC_DEFINE(CLEANUP_AFER_SIGNAL, 1,
+#     Define if rl_cleanup_after_signal is resolved in libreadline. )],[AC_MSG_RESULT(no)])
+#
+## check for readline's rl_extend_line_buffer
+#
+#AC_MSG_CHECKING([for rl_extend_line_buffer() in -lreadline])
+#AC_LINK_IFELSE([AC_LANG_PROGRAM([[]], [[
+#    extern void rl_extend_line_buffer(int len);
+#    rl_extend_line_buffer(1);
+#]])],[AC_MSG_RESULT(yes);
+#    AC_DEFINE(EXTEND_LINE_BUFFER, 1,
+#     Define if rl_extend_line_buffer is resolved in libreadline. )],[AC_MSG_RESULT(no)])
+#
+#
+#AC_MSG_CHECKING([for the readline version number])
+#AC_RUN_IFELSE([AC_LANG_SOURCE([[
+##include <stdio.h>
+##include <unistd.h>
+#int main (void) {
+#    FILE *fp = fopen("conftestversion", "w");
+#    extern char *rl_library_version;
+#    fprintf(fp, "%s", rl_library_version);
+#    fclose(fp);
+#    return 0;
+#}]])],[READLINE_VERSION=`cat conftestversion`
+#    AC_MSG_RESULT($READLINE_VERSION)],[AC_MSG_RESULT(failed)],[AC_MSG_RESULT(no cross compiling)
+#])
 
-AC_CHECK_DECL(rl_executing_macro
-, AC_DEFINE(EXECUTING_MACRO_NAME, rl_executing_macro,
-  [ Define the name of the executing macro variable in libreadline. ])
-, AC_MSG_CHECKING([for _rl_executing_macro in -lreadline])
-  AC_LINK_IFELSE([AC_LANG_PROGRAM([[]], [[
-    extern char* _rl_executing_macro;
-    _rl_executing_macro = (char*) 0;
-  
-  ]])],[AC_MSG_RESULT(yes)
-    AC_DEFINE(EXECUTING_MACRO_HACK, 1,
-     Define if EXECUTING_MACRO_NAME is resolved in libreadline. )
-    AC_DEFINE(EXECUTING_MACRO_NAME, _rl_executing_macro,
-     Define the name of the executing macro variable in libreadline. )
-  ],[AC_MSG_RESULT(no)])
-, [AC_INCLUDES_DEFAULT
-#include "$READLINE_INCLUDE_DIR/readline.h"])
-
-# check for readline's rl_cleanup_after_signal
-
-AC_MSG_CHECKING([for rl_cleanup_after_signal() in -lreadline])
-AC_LINK_IFELSE([AC_LANG_PROGRAM([[]], [[
-    extern void rl_cleanup_after_signal();
-    rl_cleanup_after_signal();
-]])],[AC_MSG_RESULT(yes);
-    AC_DEFINE(CLEANUP_AFER_SIGNAL, 1,
-     Define if rl_cleanup_after_signal is resolved in libreadline. )],[AC_MSG_RESULT(no)])
-
-# check for readline's rl_extend_line_buffer
-
-AC_MSG_CHECKING([for rl_extend_line_buffer() in -lreadline])
-AC_LINK_IFELSE([AC_LANG_PROGRAM([[]], [[
-    extern void rl_extend_line_buffer(int len);
-    rl_extend_line_buffer(1);
-]])],[AC_MSG_RESULT(yes);
-    AC_DEFINE(EXTEND_LINE_BUFFER, 1,
-     Define if rl_extend_line_buffer is resolved in libreadline. )],[AC_MSG_RESULT(no)])
-
-
-AC_MSG_CHECKING([for the readline version number])
-AC_RUN_IFELSE([AC_LANG_SOURCE([[
-#include <stdio.h>
-#include <unistd.h>
-int main (void) {
-    FILE *fp = fopen("conftestversion", "w");
-    extern char *rl_library_version;
-    fprintf(fp, "%s", rl_library_version);
-    fclose(fp);
-    return 0;
-}]])],[READLINE_VERSION=`cat conftestversion`
-    AC_MSG_RESULT($READLINE_VERSION)],[AC_MSG_RESULT(failed)],[AC_MSG_RESULT(no cross compiling)
-])
-
-AC_ARG_ENABLE(tclshrl,
-    [  --enable-tclshrl        build statically linked tclshrl],
-    [dnl action if given
-    case "${enableval}" in
-        yes) enable_static=true ;;
-        no)  enable_static=false ;;
-        *)   AC_MSG_ERROR(bad value ${enableval} for --enable-static) ;;
-    esac
-    ],
-    [dnl action if not given
-    enable_static=false
-    ]
-)
-AM_CONDITIONAL(STATIC_TCLSHRL, test x$enable_static = xtrue)
-
-AC_ARG_ENABLE(wishrl,
-    [  --enable-wishrl         build statically linked wishrl],
-    [dnl action if given
-    case "${enableval}" in
-        yes)
-        enable_static=true
-        dnl source the tkConfig.sh which defines TK_LIB_SPEC
-        . $TK_LIB_DIR/tkConfig.sh
-        AC_SUBST(TK_LIB_SPEC)
-        ;;
-        no)  enable_static=false ;;
-        *)   AC_MSG_ERROR(bad value ${enableval} for --enable-static) ;;
-    esac
-    ],
-    [dnl action if not given
-    enable_static=false
-    ]
-)
-AM_CONDITIONAL(STATIC_WISHRL, test x$enable_static = xtrue)
+#AC_ARG_ENABLE(tclshrl,
+#    [  --enable-tclshrl        build statically linked tclshrl],
+#    [dnl action if given
+#    case "${enableval}" in
+#        yes) enable_static=true ;;
+#        no)  enable_static=false ;;
+#        *)   AC_MSG_ERROR(bad value ${enableval} for --enable-static) ;;
+#    esac
+#    ],
+#    [dnl action if not given
+#    enable_static=false
+#    ]
+#)
+#AM_CONDITIONAL(STATIC_TCLSHRL, test x$enable_static = xtrue)
+#
+#AC_ARG_ENABLE(wishrl,
+#    [  --enable-wishrl         build statically linked wishrl],
+#    [dnl action if given
+#    case "${enableval}" in
+#        yes)
+#        enable_static=true
+#        dnl source the tkConfig.sh which defines TK_LIB_SPEC
+#        . $TK_LIB_DIR/tkConfig.sh
+#        AC_SUBST(TK_LIB_SPEC)
+#        ;;
+#        no)  enable_static=false ;;
+#        *)   AC_MSG_ERROR(bad value ${enableval} for --enable-static) ;;
+#    esac
+#    ],
+#    [dnl action if not given
+#    enable_static=false
+#    ]
+#)
+#AM_CONDITIONAL(STATIC_WISHRL, test x$enable_static = xtrue)
 
 #--------------------------------------------------------------------
 # Setup a *Config.sh.in configuration file.
@@ -291,7 +292,7 @@ AM_CONDITIONAL(STATIC_WISHRL, test x$enable_static = xtrue)
 # substituting the AC variables in. Include these here.
 #--------------------------------------------------------------------
 
-AC_CONFIG_FILES([Makefile pkgIndex.tcl generic/config.h generic/tclreadline.h])
+AC_CONFIG_FILES([Makefile pkgIndex.tcl generic/config.h generic/tclreadline.h doc/tclreadline.n])
 #AC_CONFIG_FILES([sampleConfig.sh])
 
 #--------------------------------------------------------------------

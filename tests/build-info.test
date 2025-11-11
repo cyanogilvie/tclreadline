@@ -3,7 +3,6 @@
 
 if {[lsearch [namespace children] ::tcltest] == -1} {
     package require tcltest
-    namespace import ::tcltest::*
 }
 if {[llength [info commands test]] == 0} {
     namespace import ::tcltest::test

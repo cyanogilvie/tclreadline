@@ -17,7 +17,7 @@ if {[info exists env(TEMP)]} {
     }
 }
 
-eval tcltest::configure $argv
+tcltest::configure {*}$argv
 
 # ERROR_ON_FAILURES for github actions
 set ErrorOnFailures [info exists env(ERROR_ON_FAILURES)]
