@@ -8,8 +8,6 @@
 # ---
 
 
-package provide tclreadline @VERSION@
-
 rename unknown _unknown
 proc unknown args {
 

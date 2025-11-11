@@ -1,23 +1,69 @@
-dnl -*- autoconf -*-
-dnl FILE: configure.in
-dnl $Id$
-dnl ---
-dnl tclreadline -- gnu readline for tcl
-dnl https://github.com/flightaware/tclreadline/
-dnl Copyright (c) 1998 - 2014, Johannes Zellner <johannes@zellner.org>
-dnl This software is copyright under the BSD license.
-dnl ---
+#!/bin/bash -norc
+dnl	This file is an input file used by the GNU "autoconf" program to
+dnl	generate the file "configure", which is run during Tcl installation
+dnl	to configure the system for the local environment.
+
+#-----------------------------------------------------------------------
+# Sample configure.ac for Tcl Extensions.  The only places you should
+# need to modify this file are marked by the string __CHANGE__
+#-----------------------------------------------------------------------
+
+#-----------------------------------------------------------------------
+# __CHANGE__
+# Set your package name and version numbers here.
+#
+# This initializes the environment with PACKAGE_NAME and PACKAGE_VERSION
+# set as provided.  These will also be added as -D defs in your Makefile
+# so you can encode the package version directly into the source files.
+# This will also define a special symbol for Windows (BUILD_<PACKAGE_NAME>
+# so that we create the export library with the dll.
+#-----------------------------------------------------------------------
 
 AC_INIT([tclreadline],[2.4.1])
-AC_CONFIG_SRCDIR([tclreadline.c])
-AC_CONFIG_HEADERS(config.h)
-AC_PREREQ([2.71])
-AC_REVISION($Revision$)
-AC_CONFIG_AUX_DIR(./aux)
 
-MAJOR="`echo 'AC_PACKAGE_VERSION' | cut -d. -f 1`"
-MINOR="`echo 'AC_PACKAGE_VERSION' | cut -d. -f 2`"
-PATCHLEVEL="`echo 'AC_PACKAGE_VERSION' | cut -d. -f 3`"
+#--------------------------------------------------------------------
+# Call TEA_INIT as the first TEA_ macro to set up initial vars.
+# This will define a ${TEA_PLATFORM} variable == "unix" or "windows"
+# as well as PKG_LIB_FILE and PKG_STUB_LIB_FILE.
+#--------------------------------------------------------------------
+
+TEA_INIT()
+
+AC_CONFIG_AUX_DIR(tclconfig)
+
+#--------------------------------------------------------------------
+# Load the tclConfig.sh file
+#--------------------------------------------------------------------
+
+TEA_PATH_TCLCONFIG
+TEA_LOAD_TCLCONFIG
+
+#--------------------------------------------------------------------
+# Load the tkConfig.sh file if necessary (Tk extension)
+#--------------------------------------------------------------------
+
+TEA_PATH_TKCONFIG
+TEA_LOAD_TKCONFIG
+
+#-----------------------------------------------------------------------
+# Handle the --prefix=... option by defaulting to what Tcl gave.
+# Must be called after TEA_LOAD_TCLCONFIG and before TEA_SETUP_COMPILER.
+#-----------------------------------------------------------------------
+
+TEA_PREFIX
+
+#-----------------------------------------------------------------------
+# Standard compiler checks.
+# This sets up CC by using the CC env var, or looks for gcc otherwise.
+# This also calls AC_PROG_CC and a few others to create the basic setup
+# necessary to compile executables.
+#-----------------------------------------------------------------------
+
+TEA_SETUP_COMPILER
+
+MAJOR="`echo 'PACKAGE_VERSION' | cut -d. -f 1`"
+MINOR="`echo 'PACKAGE_VERSION' | cut -d. -f 2`"
+PATCHLEVEL="`echo 'PACKAGE_VERSION' | cut -d. -f 3`"
 VERSION=$MAJOR.$MINOR
 PATCHLEVEL_STR=$VERSION.$PATCHLEVEL
 
@@ -27,191 +73,120 @@ AC_SUBST(PATCHLEVEL)
 AC_SUBST(VERSION)
 AC_SUBST(PATCHLEVEL_STR)
 
-AM_INIT_AUTOMAKE([foreign])
+#-----------------------------------------------------------------------
+# __CHANGE__
+# Specify the C source files to compile in TEA_ADD_SOURCES,
+# public headers that need to be installed in TEA_ADD_HEADERS,
+# stub library C source files to compile in TEA_ADD_STUB_SOURCES,
+# and runtime Tcl library files in TEA_ADD_TCL_SOURCES.
+# This defines PKG(_STUB)_SOURCES, PKG(_STUB)_OBJECTS, PKG_HEADERS
+# and PKG_TCL_SOURCES.
+#-----------------------------------------------------------------------
 
-
-AC_PROG_MAKE_SET
-
-dnl AM_INIT_AUTOMAKE(tclreadline, $VERSION)
-
-AC_CANONICAL_HOST
-AC_PROG_CC
-AC_EXEEXT
-
-LT_INIT([dlopen])
-AC_SUBST(LIBTOOL_DEPS)
-
-AC_C_CONST
-AC_PROG_INSTALL
-AC_PROG_RANLIB
-AC_PROG_LN_S
-
-
-# -- WHICH TCL TO USE
-AC_ARG_WITH(
-    tcl,
-    [  --with-tcl=DIR          where to look for tclConfig.sh],
-    tcl_search=$withval,
-    tcl_search=""
-)
-
-AC_MSG_CHECKING([which tclConfig.sh to use])
-TCL_LIB_DIR=""
-for dir in $tcl_search /usr/lib /usr/local/lib $exec_prefix/lib /usr/local/lib/unix /opt/tcl/lib; do
-    if test -r $dir/tclConfig.sh; then
-        TCL_LIB_DIR=$dir
-        break
-    fi
-done
-
-if test -z "$TCL_LIB_DIR"; then
-    AC_MSG_ERROR(Can't find Tcl libraries.  Use --with-tcl to specify the directory containing tclConfig.sh on your system.)
-fi
-
-. $TCL_LIB_DIR/tclConfig.sh
-AC_MSG_RESULT($TCL_LIB_DIR/tclConfig.sh)
-AC_MSG_CHECKING([for your tcl version])
-AC_MSG_RESULT([$TCL_VERSION, patchlevel $TCL_PATCH_LEVEL])
-
-# Check, if tcl_version is > 8.0
-if test $TCL_MAJOR_VERSION -lt 8; then
-    AC_MSG_ERROR(need tcl 8.0 or higher.)
-fi
-
-
-# -- WHICH TK TO USE
-AC_ARG_WITH(
-    tk,
-    [  --with-tk=DIR          where to look for tkConfig.sh],
-    tk_search=$withval,
-    tk_search=""
-)
-
-if test x$tk_search != xno; then
-
-    AC_MSG_CHECKING([which tkConfig.sh to use])
-    TK_LIB_DIR=""
-    for dir in $tk_search $tcl_search /usr/lib /usr/local/lib $exec_prefix/lib /usr/local/lib/unix /opt/tcl/lib; do
-        if test -r $dir/tkConfig.sh; then
-            TK_LIB_DIR=$dir
-            break
-        fi
-    done
-
-    if test -z "$TK_LIB_DIR"; then
-        AC_MSG_ERROR(Can't find Tk libraries.  Use --with-tk to specify the directory containing tkConfig.sh on your system.)
-    fi
-
-    . $TK_LIB_DIR/tkConfig.sh
-    AC_MSG_RESULT($TK_LIB_DIR/tkConfig.sh)
-    AC_MSG_CHECKING([for your tk version])
-    AC_MSG_RESULT([$TK_VERSION, patchlevel $TK_PATCH_LEVEL])
-
-    # Check, if tk_version is > 8.0
-    if test $TK_MAJOR_VERSION -lt 8; then
-        AC_MSG_ERROR(need tk 8.0 or higher.)
-    fi
-    
-fi
-
-# -----------------------------------------------------------------------
-#   Set up a new default --prefix.
-# -----------------------------------------------------------------------
-
-# this is the default anyway:
-# AC_PREFIX_DEFAULT(/usr/local)
-
-if test "${prefix}" = "NONE"; then
-    prefix=$TCL_PREFIX
-fi
-TCLRL_LIBDIR="${prefix}/lib"
-AC_SUBST(TCLRL_LIBDIR)
-TCLRL_DIR="${TCLRL_LIBDIR}/tclreadline$VERSION"
-AC_SUBST(TCLRL_DIR)
-
-# HEADERS
-# Autoupdate added the next two lines to ensure that your configure
-# script's behavior did not change.  They are probably safe to remove.
-AC_CHECK_INCLUDES_DEFAULT
-AC_PROG_EGREP
-
-AC_CHECK_HEADERS(string.h)
+TEA_ADD_SOURCES([generic/tclreadline.c generic/tclreadlineBuildInfo.c])
+TEA_ADD_HEADERS([])
+TEA_ADD_INCLUDES([])
+TEA_ADD_LIBS([`pkg-config --libs readline`])
+TEA_ADD_CFLAGS([`pkg-config --cflags readline`])
+TEA_ADD_STUB_SOURCES([])
+TEA_ADD_TCL_SOURCES([tclreadlineSetup.tcl tclreadlineCompleter.tcl])
 
 #--------------------------------------------------------------------
-#   Check for tcl.h
+# __CHANGE__
+#
+# You can add more files to clean if your extension creates any extra
+# files by extending CLEANFILES.
+# Add pkgIndex.tcl if it is generated in the Makefile instead of ./configure
+# and change Makefile.in to move it from CONFIG_CLEAN_FILES to BINARIES var.
+#
+# A few miscellaneous platform-specific items:
+# TEA_ADD_* any platform specific compiler/build info here.
 #--------------------------------------------------------------------
 
-AC_ARG_WITH(tcl-includes,
-            [  --with-tcl-includes=DIR where to look for tcl.h],
-            tcl_includes=$withval, tcl_includes=$prefix/include)
-
-AC_MSG_CHECKING([where to look for tcl.h])
-TCL_INCLUDE_DIR=""
-for dir in $tcl_includes $prefix/include/ ${TCL_INCLUDE_SPEC#-I} /usr/include; do
-    if test -r $dir/tcl.h; then
-        TCL_INCLUDE_DIR=$dir
-        break
-    fi
-done
-
-if test -z "$TCL_INCLUDE_DIR"; then
-    AC_MSG_ERROR([
-  Can't find tcl.h.  Use --with-tcl-includes to specify the directory
-  containing tcl.h on your system.])
+#CLEANFILES="$CLEANFILES pkgIndex.tcl"
+if test "${TEA_PLATFORM}" = "windows" ; then
+    # Ensure no empty if clauses
+    :
+    #TEA_ADD_SOURCES([win/winFile.c])
+    #TEA_ADD_INCLUDES([-I\"$(${CYGPATH} ${srcdir}/win)\"])
 else
-    AC_MSG_RESULT($TCL_INCLUDE_DIR/tcl.h)
+    # Ensure no empty else clauses
+    :
+    #TEA_ADD_SOURCES([unix/unixFile.c])
+    #TEA_ADD_LIBS([-lsuperfly])
 fi
+
 #--------------------------------------------------------------------
-#   Check for readline.h
+# __CHANGE__
+# Choose which headers you need.  Extension authors should try very
+# hard to only rely on the Tcl public header files.  Internal headers
+# contain private data structures and are subject to change without
+# notice.
+# This MUST be called after TEA_LOAD_TCLCONFIG / TEA_LOAD_TKCONFIG
 #--------------------------------------------------------------------
 
-AC_ARG_WITH(readline-includes,
-            [  --with-readline-includes=DIR readline include files in DIR],
-            rl_includes=$withval, rl_includes="")
+TEA_PUBLIC_TCL_HEADERS
+#TEA_PRIVATE_TCL_HEADERS
 
-dnl look for readline/readline.h
-dnl          ^^^^^^^^
-AC_MSG_CHECKING([where to look for readline.h])
-READLINE_INCLUDE_DIR=""
-for dir in $rl_includes /usr/local/include /usr/include ; do
-    if test -r $dir/readline/readline.h; then
-        READLINE_INCLUDE_DIR=$dir
-        break
-    fi
-done
+TEA_PUBLIC_TK_HEADERS
+#TEA_PRIVATE_TK_HEADERS
+#TEA_PATH_X
 
-dnl look directly in the include dirs for readline.h
-if test -z "$READLINE_INCLUDE_DIR"; then
-    for dir in $rl_includes /usr/local/include /usr/include ; do
-    if test -r $dir/readline.h; then
-        READLINE_INCLUDE_DIR=$dir
-        AC_DEFINE_UNQUOTED(READLINE_LIBRARY, 1, [ Define if we have libreadline. ])
-        break
-    fi
-    done
-fi
+#--------------------------------------------------------------------
+# Check whether --enable-threads or --disable-threads was given.
+# This auto-enables if Tcl was compiled threaded.
+#--------------------------------------------------------------------
 
-if test -z "$READLINE_INCLUDE_DIR"; then
-    AC_MSG_ERROR([
-  Can't find readline.h.
-  Use --with-readline-includes to specify the directory
-  containing readline.h on your system.])
-fi
+TEA_ENABLE_THREADS
 
-AC_ARG_WITH(readline-library,
-    [  --with-readline-library=DIR
-          lib spec to readline (e.g. '-L/usr/local/lib -lreadline')],
-    LIBS="$LIBS $withval",
-    AC_SEARCH_LIBS(rl_callback_read_char, readline, ,
-        AC_MSG_RESULT([
-            Your readline version does not support readline's alternate interface.
-            Please upgrade to readline >= 2.2 and retry.
-        ])
-        exit
-    )
-)
+#--------------------------------------------------------------------
+# The statement below defines a collection of symbols related to
+# building as a shared library instead of a static library.
+#--------------------------------------------------------------------
+
+TEA_ENABLE_SHARED
+
+#--------------------------------------------------------------------
+# This macro figures out what flags to use with the compiler/linker
+# when building shared/static debug/optimized objects.  This information
+# can be taken from the tclConfig.sh file, but this figures it all out.
+#--------------------------------------------------------------------
+
+TEA_CONFIG_CFLAGS
+
+#--------------------------------------------------------------------
+# Set the default compiler switches based on the --enable-symbols option.
+#--------------------------------------------------------------------
+
+TEA_ENABLE_SYMBOLS
+
+#--------------------------------------------------------------------
+# This macro generates a line to use when building a library.  It
+# depends on values set by the TEA_ENABLE_SHARED, TEA_ENABLE_SYMBOLS,
+# and TEA_LOAD_TCLCONFIG macros above.
+#--------------------------------------------------------------------
+
+TEA_MAKE_LIB
+
+#--------------------------------------------------------------------
+# Determine the name of the tclsh and/or wish executables in the
+# Tcl and Tk build directories or the location they were installed
+# into. These paths are used to support running test cases only,
+# the Makefile should not be making use of these paths to generate
+# a pkgIndex.tcl file or anything else at extension build time.
+#--------------------------------------------------------------------
+
+TEA_PROG_TCLSH
+#TEA_PROG_WISH
 
 
+AC_CHECK_HEADERS([string.h])
+
+#--------------------------------------------------------------------
+# Do we have sigaction?
+#--------------------------------------------------------------------
+
+AC_CHECK_FUNCS([sigaction])
 
 # check for readline's rl_executing_macro
 # (could be macro.c's private variable _rl_executing_macro).
@@ -268,21 +243,6 @@ int main (void) {
     AC_MSG_RESULT($READLINE_VERSION)],[AC_MSG_RESULT(failed)],[AC_MSG_RESULT(no cross compiling)
 ])
 
-AC_ARG_ENABLE(tclstub,
-    [  --enable-tclstub        build with TCL stub library],
-    [dnl action if given
-    case "${enableval}" in
-        yes) enable_tclstub=true ;; 
-        no)  enable_tclstub=false ;;
-        *)   AC_MSG_ERROR(bad value ${enableval} for --enable-tclstub) ;;
-    esac
-    ],
-    [dnl action if not given
-    enable_tclstub=false
-    ]
-)
-AM_CONDITIONAL(USE_TCL_STUBS, test x$enable_tclstub = xtrue)
-
 AC_ARG_ENABLE(tclshrl,
     [  --enable-tclshrl        build statically linked tclshrl],
     [dnl action if given
@@ -318,9 +278,25 @@ AC_ARG_ENABLE(wishrl,
 )
 AM_CONDITIONAL(STATIC_WISHRL, test x$enable_static = xtrue)
 
-AC_SUBST(TCL_INCLUDE_DIR)
-AC_SUBST(TCL_STUB_LIB_SPEC)
-AC_SUBST(TCL_LIB_SPEC)
-AC_SUBST(READLINE_INCLUDE_DIR)
-AC_CONFIG_FILES([Makefile tclreadline.h tclreadlineInit.tcl tclreadlineSetup.tcl tclreadline.n pkgIndex.tcl])
+#--------------------------------------------------------------------
+# Setup a *Config.sh.in configuration file.
+#--------------------------------------------------------------------
+
+#TEA_EXPORT_CONFIG([sample])
+#AC_SUBST(SAMPLE_VAR)
+
+#--------------------------------------------------------------------
+# Specify files to substitute AC variables in. You may alternatively
+# have a special pkgIndex.tcl.in or other files which require
+# substituting the AC variables in. Include these here.
+#--------------------------------------------------------------------
+
+AC_CONFIG_FILES([Makefile pkgIndex.tcl generic/config.h generic/tclreadline.h])
+#AC_CONFIG_FILES([sampleConfig.sh])
+
+#--------------------------------------------------------------------
+# Finally, substitute all of the various values into the files
+# specified with AC_CONFIG_FILES.
+#--------------------------------------------------------------------
+
 AC_OUTPUT

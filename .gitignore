@@ -1,9 +1,10 @@
-config.h
+*.swp
+*.o
+*.so
 config.log
 config.status
-pkgIndex.tcl
-tclreadline.h
-tclreadline.n
-tclreadlineInit.tcl
-tclreadlineSetup.tcl
-Makefile
+/pkgIndex.tcl
+/generic/config.h
+/generic/tclreadline.h
+/doc/tclreadline.n
+/Makefile

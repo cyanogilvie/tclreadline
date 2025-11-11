@@ -12,7 +12,7 @@
 #  include "config.h"
 #endif
 
-#include <tcl.h>
+#include "tclreadline.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -25,25 +25,20 @@
 #  include <readline/history.h>
 #endif
 
-/* Check, if Tcl version supports Tcl_Size,
- * which was introduced in Tcl 8.7 and 9.
- */
-#ifndef TCL_SIZE_MAX
-#include <limits.h>
-#define TCL_SIZE_MAX INT_MAX
-
-#ifndef Tcl_Size
-typedef int Tcl_Size;
-#endif
-
-#define TCL_SIZE_MODIFIER ""
-#define Tcl_GetSizeIntFromObj Tcl_GetIntFromObj
-#endif
-
 /* TCL 9 does not define CONST anymore */
 #ifndef CONST
 #define CONST const
 #endif
+
+/*
+ * Metainfo for a pkgconfig command for the extension via Tcl_RegisterConfig
+ * Must only have const static UTF-8 encoded char pointers.
+ */
+Tcl_Config tclreadlineConfig[] = {
+    {"version", PACKAGE_VERSION},
+    /* Add additional configuration or feature information if relevant */
+    {NULL, NULL}
+};
 
 #ifdef EXTEND_LINE_BUFFER
 /*
@@ -607,19 +602,19 @@ TclReadlineLineCompleteHandler(char* ptr)
     }
 }
 
-int
+DLLEXPORT int
 Tclreadline_SafeInit(Tcl_Interp *interp)
 {
     return Tclreadline_Init(interp);
 }
 
-int
+DLLEXPORT int
 Tclreadline_Init(Tcl_Interp *interp)
 {
     int status;
     /* Require 8.6 or later (9.0 also ok) */
 #ifdef USE_TCL_STUBS
-    if ( NULL == Tcl_InitStubs(interp, "8.6-", 0))
+    if (NULL == Tcl_InitStubs(interp, TCL_VERSION, 0))
 #else
     if (NULL == Tcl_PkgRequire(interp, "Tcl", "8.6-", 0))
 #endif
@@ -656,7 +651,10 @@ Tclreadline_Init(Tcl_Interp *interp)
             (char*) &tclrl_patchlevel_str, TCL_LINK_STRING | TCL_LINK_READ_ONLY)))
         return status;
 
-    return Tcl_PkgProvide(interp, "tclreadline", (char*)tclrl_version_str);
+    /* Register feature configuration  */
+    Tcl_RegisterConfig(interp, PACKAGE_NAME, tclreadlineConfig, "utf-8");
+
+    return Tcl_PkgProvideEx(interp, PACKAGE_NAME, PACKAGE_VERSION, NULL);
 }
 
 static int
