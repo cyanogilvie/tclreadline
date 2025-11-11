@@ -61,9 +61,9 @@ TEA_PREFIX
 
 TEA_SETUP_COMPILER
 
-MAJOR="`echo 'PACKAGE_VERSION' | cut -d. -f 1`"
-MINOR="`echo 'PACKAGE_VERSION' | cut -d. -f 2`"
-PATCHLEVEL="`echo 'PACKAGE_VERSION' | cut -d. -f 3`"
+MAJOR=`echo $PACKAGE_VERSION | cut -d. -f 1`
+MINOR=`echo $PACKAGE_VERSION | cut -d. -f 2`
+PATCHLEVEL=`echo $PACKAGE_VERSION | cut -d. -f 3`
 VERSION=$MAJOR.$MINOR
 PATCHLEVEL_STR=$VERSION.$PATCHLEVEL
 
@@ -216,7 +216,7 @@ AC_CHECK_FUNCS([sigaction])
 #    extern void rl_cleanup_after_signal();
 #    rl_cleanup_after_signal();
 #]])],[AC_MSG_RESULT(yes);
-#    AC_DEFINE(CLEANUP_AFER_SIGNAL, 1,
+#    AC_DEFINE(CLEANUP_AFTER_SIGNAL, 1,
 #     Define if rl_cleanup_after_signal is resolved in libreadline. )],[AC_MSG_RESULT(no)])
 #
 ## check for readline's rl_extend_line_buffer
@@ -292,8 +292,9 @@ AC_CHECK_FUNCS([sigaction])
 # substituting the AC variables in. Include these here.
 #--------------------------------------------------------------------
 
-AC_CONFIG_FILES([Makefile pkgIndex.tcl generic/config.h generic/tclreadline.h doc/tclreadline.n])
+AC_CONFIG_FILES([Makefile pkgIndex.tcl generic/tclreadline.h doc/tclreadline.n])
 #AC_CONFIG_FILES([sampleConfig.sh])
+AC_CONFIG_HEADERS([generic/config.h])
 
 #--------------------------------------------------------------------
 # Finally, substitute all of the various values into the files

@@ -17,13 +17,8 @@
 #include <stdlib.h>
 #include <string.h>
 
-#if defined (READLINE_LIBRARY)
-#  include <readline.h>
-#  include <history.h>
-#else
-#  include <readline/readline.h>
-#  include <readline/history.h>
-#endif
+#include <readline/readline.h>
+#include <readline/history.h>
 
 /* TCL 9 does not define CONST anymore */
 #ifndef CONST
@@ -416,7 +411,7 @@ TclReadlineCmd(ClientData clientData, Tcl_Interp *interp, int objc,
                  *   a compiler warning.
                  */
                 rl_reset_terminal(Tcl_GetStringFromObj(objv[2], 0));
-#ifdef CLEANUP_AFER_SIGNAL
+#ifdef CLEANUP_AFTER_SIGNAL
             } else {
                 rl_cleanup_after_signal();
 #endif
