@@ -1,5 +1,6 @@
 *.swp
 *.o
+*.o_nostubs
 *.so
 config.log
 config.status
@@ -14,3 +15,5 @@ autom4te.cache
 /manifest.uuid
 /tclreadlineUuid.h
 /tags
+/tclshrl*
+/wishrl*

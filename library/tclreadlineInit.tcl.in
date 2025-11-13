@@ -1,0 +1,12 @@
+# FILE: tclreadlineInit.tcl.in
+# $Id$
+# ---
+# tclreadline -- gnu readline for tcl
+# https://github.com/flightaware/tclreadline/
+# Copyright (c) 1998 - 2014, Johannes Zellner <johannes@zellner.org>
+# This software is copyright under the BSD license.
+# ---
+
+# Only run by tclshrl and wishrl
+package provide @PACKAGE_NAME@ @PACKAGE_VERSION@
+::tclreadline::readline customcompleter ::tclreadline::ScriptCompleter

@@ -40,6 +40,8 @@ PKG_OBJECTS	= @PKG_OBJECTS@
 PKG_STUB_SOURCES = @PKG_STUB_SOURCES@
 PKG_STUB_OBJECTS = @PKG_STUB_OBJECTS@
 
+PKG_OBJECTS_NOSTUBS = $(subst .@OBJEXT@,.o_nostubs,$(PKG_OBJECTS))
+
 #========================================================================
 # PKG_TCL_SOURCES identifies Tcl runtime files that are associated with
 # this package that need to be installed, if any.
@@ -63,8 +65,16 @@ PKG_LIB_FILE8	= @PKG_LIB_FILE8@
 PKG_LIB_FILE9	= @PKG_LIB_FILE9@
 PKG_STUB_LIB_FILE = @PKG_STUB_LIB_FILE@
 
+# Standalone applications (optional)
+TCLSHRL_BINARIES = @TCLSHRL_BINARIES@
+WISHRL_BINARIES = @WISHRL_BINARIES@
+
+# Whether to use zipfs for embedding init scripts
+USE_ZIPFS_EMBED = @USE_ZIPFS_EMBED@
+
 lib_BINARIES	= $(PKG_LIB_FILE)
-BINARIES	= $(lib_BINARIES)
+bin_BINARIES	= $(TCLSHRL_BINARIES) $(WISHRL_BINARIES)
+BINARIES	= $(lib_BINARIES) $(bin_BINARIES)
 
 SHELL		= @SHELL@
 
@@ -117,8 +127,11 @@ STLIB_LD	= @STLIB_LD@
 #TCL_DEFS	= @TCL_DEFS@
 TCL_BIN_DIR	= @TCL_BIN_DIR@
 TCL_SRC_DIR	= @TCL_SRC_DIR@
+TCL_LIB_SPEC	= @TCL_LIB_SPEC@
 #TK_BIN_DIR	= @TK_BIN_DIR@
 #TK_SRC_DIR	= @TK_SRC_DIR@
+TK_LIB_SPEC	= @TK_LIB_SPEC@
+TK_LIBS		= @TK_LIBS@
 
 # Not used, but retained for reference of what libs Tcl required
 #TCL_LIBS	= @TCL_LIBS@
@@ -147,7 +160,7 @@ TCLSH		= $(TCLSH_ENV) $(PKG_ENV) $(TCLSH_PROG)
 
 SHARED_BUILD	= @SHARED_BUILD@
 
-INCLUDES	= @PKG_INCLUDES@ @TCL_INCLUDES@ -I.
+INCLUDES	= @TCL_INCLUDE_SPEC@ @PKG_INCLUDES@ @TCL_INCLUDES@ -I.
 #INCLUDES	= @PKG_INCLUDES@ @TCL_INCLUDES@ @TK_INCLUDES@ @TK_XINCLUDES@
 
 PKG_CFLAGS	= @PKG_CFLAGS@
@@ -216,10 +229,6 @@ libraries:
 #========================================================================
 
 doc:
-	@echo "If you have documentation to create, place the commands to"
-	@echo "build the docs in the 'doc:' target.  For example:"
-	@echo "        xml2nroff sample.xml > sample.n"
-	@echo "        xml2html sample.xml > sample.html"
 
 install: all install-binaries install-libraries install-doc
 
@@ -319,12 +328,54 @@ $(PKG_STUB_LIB_FILE): $(PKG_STUB_OBJECTS)
 # As necessary, add $(srcdir):$(srcdir)/compat:....
 #========================================================================
 
-VPATH = $(srcdir):$(srcdir)/generic:$(srcdir)/unix:$(srcdir)/win:$(srcdir)/macosx
+VPATH = $(srcdir):$(srcdir)/generic:$(srcdir)/unix:$(srcdir)/win:$(srcdir)/macosx:$(srcdir)/library
 
 .c.@OBJEXT@:
 	$(COMPILE) -c `@CYGPATH@ $<` -o $@
 
+%.o_nostubs: generic/%.c
+	$(COMPILE) -DNOSTUBS -c `@CYGPATH@ $<` -o $@
+
 tclreadlineBuildInfo.@OBJEXT@:	tclreadlineUuid.h
+
+#========================================================================
+# Build rules for standalone applications (tclshrl and wishrl)
+# Following the pattern used by Tk's wish: link the app against the
+# shared library and the full Tcl/Tk libraries (not stubs)
+#========================================================================
+
+USE_EMBED_METHOD = @USE_EMBED_METHOD@
+OBJCOPY = @OBJCOPY@
+
+SHELL_INIT_SCRIPTS = library/tclreadlineInit.tcl $(PKG_TCL_SOURCES)
+ifeq ($(USE_EMBED_METHOD),objcopy)
+SHELL_INIT_SCRIPT_OBJS = $(addsuffix .@OBJEXT@, $(addprefix _embed_, $(subst library/,,$(SHELL_INIT_SCRIPTS))))
+else
+SHELL_INIT_SCRIPT_OBJS =
+endif
+
+# Wrap a data file in an object and add a symbol to access it
+$(SHELL_INIT_SCRIPT_OBJS): _embed_%.@OBJEXT@: library/%
+	$(CC) -x c -c -o $@ /dev/null
+	echo -ne '\0' | cat $< - | $(OBJCOPY) \
+		--add-section		.embed=/dev/stdin \
+		--set-section-flags	.embed=data,alloc,load \
+		--add-symbol		_TclReadlineInitScript_$(subst .,_,$(shell basename $<))=.embed:0,global,object \
+		$@
+
+tclshrl$(EXEEXT): generic/tclshrl.c $(PKG_OBJECTS_NOSTUBS) $(SHELL_INIT_SCRIPTS) $(SHELL_INIT_SCRIPT_OBJS)
+	$(COMPILE) -DNOSTUBS $(SHELL_INIT_SCRIPT_OBJS) $< $(PKG_OBJECTS_NOSTUBS) $(LIBS) $(TCL_LIB_SPEC) -o $@
+	@if test "$(USE_EMBED_METHOD)" = "zipfs"; then \
+	    echo "Appending zipfs init scripts to $@"; \
+	    $(TCLSH) `@CYGPATH@ $(srcdir)/append_init_scripts.tcl` `@CYGPATH@ $@` `@CYGPATH@ $@` "$(SHELL_INIT_SCRIPTS)"; \
+	fi
+
+wishrl$(EXEEXT): generic/wishrl.c $(PKG_OBJECTS_NOSTUBS) $(SHELL_INIT_SCRIPTS) $(SHELL_INIT_SCRIPT_OBJS)
+	$(COMPILE) -DNOSTUBS $(SHELL_INIT_SCRIPT_OBJS) $< $(PKG_OBJECTS_NOSTUBS) $(LIBS) $(TK_LIB_SPEC) $(TCL_LIB_SPEC) $(TK_LIBS) $(LIBS) -o $@
+	@if test "$(USE_EMBED_METHOD)" = "zipfs"; then \
+	    echo "Appending zipfs init scripts to $@"; \
+	    $(TCLSH) `@CYGPATH@ $(srcdir)/append_init_scripts.tcl` `@CYGPATH@ $@` `@CYGPATH@ $@` "$(SHELL_INIT_SCRIPTS)"; \
+	fi
 
 $(srcdir)/manifest.uuid:
 	printf "git-" >$(srcdir)/manifest.uuid
@@ -399,7 +450,7 @@ dist: dist-clean $(srcdir)/manifest.uuid
 
 clean:
 	-test -z "$(BINARIES)" || rm -f $(BINARIES)
-	-rm -f *.$(OBJEXT) core *.core
+	-rm -f *.$(OBJEXT) *.o_nostubs core *.core
 	-test -z "$(CLEANFILES)" || rm -f $(CLEANFILES)
 
 distclean: clean

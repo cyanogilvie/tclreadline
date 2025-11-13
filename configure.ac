@@ -42,8 +42,17 @@ TEA_LOAD_TCLCONFIG
 # Load the tkConfig.sh file if necessary (Tk extension)
 #--------------------------------------------------------------------
 
+# Handle --without-tk by setting no_tk before TEA_PATH_TKCONFIG runs
+# This prevents the error when tkConfig.sh is not found
+AC_ARG_WITH([tk])
+if test "$with_tk" = "no"; then
+    no_tk=true
+fi
+
 TEA_PATH_TKCONFIG
-TEA_LOAD_TKCONFIG
+if test "$no_tk" != "true"; then
+    TEA_LOAD_TKCONFIG
+fi
 
 #-----------------------------------------------------------------------
 # Handle the --prefix=... option by defaulting to what Tcl gave.
@@ -60,6 +69,9 @@ TEA_PREFIX
 #-----------------------------------------------------------------------
 
 TEA_SETUP_COMPILER
+
+HIGHEST_C_STANDARD
+CFLAGS="$C_STD_CFLAGS $CFLAGS"
 
 MAJOR=`echo $PACKAGE_VERSION | cut -d. -f 1`
 MINOR=`echo $PACKAGE_VERSION | cut -d. -f 2`
@@ -83,13 +95,51 @@ AC_SUBST(PATCHLEVEL_STR)
 # and PKG_TCL_SOURCES.
 #-----------------------------------------------------------------------
 
+#--------------------------------------------------------------------
+# Allow user to override readline location
+#--------------------------------------------------------------------
+
+AC_ARG_WITH([readline-includes],
+    [AS_HELP_STRING([--with-readline-includes=DIR],
+        [directory containing readline headers (default: from pkg-config)])],
+    [readline_includes=$withval],
+    [readline_includes=auto])
+
+AC_ARG_WITH([readline-library],
+    [AS_HELP_STRING([--with-readline-library=lib spec],
+        [lib spec to readline (e.g. '-L/usr/local/lib -lreadline') (default: from pkg-config)])],
+    [readline_library=$withval],
+    [readline_library=auto])
+
+# Get readline build flags from pkg-config or user-specified paths
+if test "$readline_includes" == "auto"; then
+	READLINE_CFLAGS=`pkg-config --cflags readline 2>/dev/null || echo ""`
+else
+	READLINE_CFLAGS="-I$readline_includes"
+fi
+
+if test "$readline_library" == "auto"; then
+	READLINE_LIBS=`pkg-config --libs readline 2>/dev/null || echo "-lreadline"`
+else
+	READLINE_LIBS="-L$readline_library -lreadline"
+fi
+
+AC_MSG_CHECKING([for readline compiler flags])
+AC_MSG_RESULT([$READLINE_CFLAGS])
+AC_MSG_CHECKING([for readline linker flags])
+AC_MSG_RESULT([$READLINE_LIBS])
+
+#--------------------------------------------------------------------
+# Determine highest C standard and check for C23 features
+#--------------------------------------------------------------------
+
 TEA_ADD_SOURCES([generic/tclreadline.c generic/tclreadlineBuildInfo.c])
 TEA_ADD_HEADERS([])
 TEA_ADD_INCLUDES([])
-TEA_ADD_LIBS([`pkg-config --libs readline`])
-TEA_ADD_CFLAGS([`pkg-config --cflags readline`])
+TEA_ADD_LIBS([${READLINE_LIBS}])
+TEA_ADD_CFLAGS([${C_STD_CFLAGS} ${READLINE_CFLAGS}])
 TEA_ADD_STUB_SOURCES([])
-TEA_ADD_TCL_SOURCES([tclreadlineSetup.tcl tclreadlineCompleter.tcl])
+TEA_ADD_TCL_SOURCES([library/tclreadlineSetup.tcl library/tclreadlineCompleter.tcl])
 
 #--------------------------------------------------------------------
 # __CHANGE__
@@ -128,8 +178,10 @@ fi
 TEA_PUBLIC_TCL_HEADERS
 #TEA_PRIVATE_TCL_HEADERS
 
-TEA_PUBLIC_TK_HEADERS
-#TEA_PRIVATE_TK_HEADERS
+if test "$no_tk" != "true"; then
+    TEA_PUBLIC_TK_HEADERS
+    #TEA_PRIVATE_TK_HEADERS
+fi
 #TEA_PATH_X
 
 #--------------------------------------------------------------------
@@ -188,96 +240,214 @@ AC_CHECK_HEADERS([string.h])
 
 AC_CHECK_FUNCS([sigaction])
 
-# TODO: port these checks:
-## check for readline's rl_executing_macro
-## (could be macro.c's private variable _rl_executing_macro).
-#
-#AC_CHECK_DECL(rl_executing_macro
-#, AC_DEFINE(EXECUTING_MACRO_NAME, rl_executing_macro,
-#  [ Define the name of the executing macro variable in libreadline. ])
-#, AC_MSG_CHECKING([for _rl_executing_macro in -lreadline])
-#  AC_LINK_IFELSE([AC_LANG_PROGRAM([[]], [[
-#    extern char* _rl_executing_macro;
-#    _rl_executing_macro = (char*) 0;
-#  
-#  ]])],[AC_MSG_RESULT(yes)
-#    AC_DEFINE(EXECUTING_MACRO_HACK, 1,
-#     Define if EXECUTING_MACRO_NAME is resolved in libreadline. )
-#    AC_DEFINE(EXECUTING_MACRO_NAME, _rl_executing_macro,
-#     Define the name of the executing macro variable in libreadline. )
-#  ],[AC_MSG_RESULT(no)])
-#, [AC_INCLUDES_DEFAULT
-##include "$READLINE_INCLUDE_DIR/readline.h"])
-#
-## check for readline's rl_cleanup_after_signal
-#
-#AC_MSG_CHECKING([for rl_cleanup_after_signal() in -lreadline])
-#AC_LINK_IFELSE([AC_LANG_PROGRAM([[]], [[
-#    extern void rl_cleanup_after_signal();
-#    rl_cleanup_after_signal();
-#]])],[AC_MSG_RESULT(yes);
-#    AC_DEFINE(CLEANUP_AFTER_SIGNAL, 1,
-#     Define if rl_cleanup_after_signal is resolved in libreadline. )],[AC_MSG_RESULT(no)])
-#
-## check for readline's rl_extend_line_buffer
-#
-#AC_MSG_CHECKING([for rl_extend_line_buffer() in -lreadline])
-#AC_LINK_IFELSE([AC_LANG_PROGRAM([[]], [[
-#    extern void rl_extend_line_buffer(int len);
-#    rl_extend_line_buffer(1);
-#]])],[AC_MSG_RESULT(yes);
-#    AC_DEFINE(EXTEND_LINE_BUFFER, 1,
-#     Define if rl_extend_line_buffer is resolved in libreadline. )],[AC_MSG_RESULT(no)])
-#
-#
-#AC_MSG_CHECKING([for the readline version number])
-#AC_RUN_IFELSE([AC_LANG_SOURCE([[
-##include <stdio.h>
-##include <unistd.h>
-#int main (void) {
-#    FILE *fp = fopen("conftestversion", "w");
-#    extern char *rl_library_version;
-#    fprintf(fp, "%s", rl_library_version);
-#    fclose(fp);
-#    return 0;
-#}]])],[READLINE_VERSION=`cat conftestversion`
-#    AC_MSG_RESULT($READLINE_VERSION)],[AC_MSG_RESULT(failed)],[AC_MSG_RESULT(no cross compiling)
-#])
+#--------------------------------------------------------------------
+# Can we embed data in object files with objcopy?
+#--------------------------------------------------------------------
+CHECK_EMBED_BINARY
 
-#AC_ARG_ENABLE(tclshrl,
-#    [  --enable-tclshrl        build statically linked tclshrl],
-#    [dnl action if given
-#    case "${enableval}" in
-#        yes) enable_static=true ;;
-#        no)  enable_static=false ;;
-#        *)   AC_MSG_ERROR(bad value ${enableval} for --enable-static) ;;
-#    esac
-#    ],
-#    [dnl action if not given
-#    enable_static=false
-#    ]
-#)
-#AM_CONDITIONAL(STATIC_TCLSHRL, test x$enable_static = xtrue)
-#
-#AC_ARG_ENABLE(wishrl,
-#    [  --enable-wishrl         build statically linked wishrl],
-#    [dnl action if given
-#    case "${enableval}" in
-#        yes)
-#        enable_static=true
-#        dnl source the tkConfig.sh which defines TK_LIB_SPEC
-#        . $TK_LIB_DIR/tkConfig.sh
-#        AC_SUBST(TK_LIB_SPEC)
-#        ;;
-#        no)  enable_static=false ;;
-#        *)   AC_MSG_ERROR(bad value ${enableval} for --enable-static) ;;
-#    esac
-#    ],
-#    [dnl action if not given
-#    enable_static=false
-#    ]
-#)
-#AM_CONDITIONAL(STATIC_WISHRL, test x$enable_static = xtrue)
+#--------------------------------------------------------------------
+# Check for readline features
+# Use the same flags that will be used for building (PKG_LIBS, PKG_CFLAGS)
+#--------------------------------------------------------------------
+
+# Save LIBS and CFLAGS, then add the package build flags for feature detection
+# Note: We need to expand CFLAGS variables that TEA_CONFIG_CFLAGS set as makefile variables
+SAVE_LIBS="$LIBS"
+SAVE_CFLAGS="$CFLAGS"
+LIBS="$LIBS ${PKG_LIBS} ${TCL_LIB_SPEC}"
+# Expand the makefile variables in CFLAGS for use in compile tests
+eval "EXPANDED_CFLAGS=\"$CFLAGS\""
+#CFLAGS="$EXPANDED_CFLAGS $PKG_INCLUDES $TCL_INCLUDES ${PKG_CFLAGS}"
+CFLAGS="$TCL_INCLUDE_SPEC $EXPANDED_CFLAGS $PKG_INCLUDES ${PKG_CFLAGS}"
+
+# Check for readline's rl_executing_macro or _rl_executing_macro
+# (could be macro.c's private variable _rl_executing_macro)
+AC_MSG_CHECKING([for rl_executing_macro in -lreadline])
+AC_LINK_IFELSE([AC_LANG_PROGRAM([[
+    #include <stdio.h>
+    #include <readline/readline.h>
+    extern char* rl_executing_macro;
+]], [[
+    rl_executing_macro = (char*) 0;
+]])],
+[AC_MSG_RESULT(yes)
+ AC_DEFINE(EXECUTING_MACRO_NAME, rl_executing_macro,
+     [Define to the name of the executing macro variable in libreadline.])],
+[AC_MSG_RESULT(no)
+ # Try the private _rl_executing_macro variable
+ AC_MSG_CHECKING([for _rl_executing_macro in -lreadline])
+ AC_LINK_IFELSE([AC_LANG_PROGRAM([[
+     #include <stdio.h>
+     #include <readline/readline.h>
+     extern char* _rl_executing_macro;
+ ]], [[
+     _rl_executing_macro = (char*) 0;
+ ]])],
+ [AC_MSG_RESULT(yes)
+  AC_DEFINE(EXECUTING_MACRO_HACK, 1,
+      [Define if EXECUTING_MACRO_NAME is resolved in libreadline.])
+  AC_DEFINE(EXECUTING_MACRO_NAME, _rl_executing_macro,
+      [Define to the name of the executing macro variable in libreadline.])],
+ [AC_MSG_RESULT(no)])])
+
+# Check for readline's rl_cleanup_after_signal
+AC_MSG_CHECKING([for rl_cleanup_after_signal() in -lreadline])
+AC_LINK_IFELSE([AC_LANG_PROGRAM([[
+    #include <stdio.h>
+    #include <readline/readline.h>
+    extern void rl_cleanup_after_signal(void);
+]], [[
+    rl_cleanup_after_signal();
+]])],
+[AC_MSG_RESULT(yes)
+ AC_DEFINE(CLEANUP_AFTER_SIGNAL, 1,
+     [Define if rl_cleanup_after_signal is resolved in libreadline.])],
+[AC_MSG_RESULT(no)])
+
+# Check for readline's rl_extend_line_buffer
+AC_MSG_CHECKING([for rl_extend_line_buffer() in -lreadline])
+AC_LINK_IFELSE([AC_LANG_PROGRAM([[
+    #include <stdio.h>
+    #include <readline/readline.h>
+    extern void rl_extend_line_buffer(int len);
+]], [[
+    rl_extend_line_buffer(1);
+]])],
+[AC_MSG_RESULT(yes)
+ AC_DEFINE(EXTEND_LINE_BUFFER, 1,
+     [Define if rl_extend_line_buffer is resolved in libreadline.])],
+[AC_MSG_RESULT(no)])
+
+# Check for the readline version number
+AC_MSG_CHECKING([for the readline version number])
+AC_LINK_IFELSE([AC_LANG_PROGRAM([[
+    #include <stdio.h>
+    #include <readline/readline.h>
+    extern const char *rl_library_version;
+]], [[
+    const char *version = rl_library_version;
+    (void)version;
+]])],
+[AC_MSG_RESULT([runtime detection])
+ AC_DEFINE(HAVE_RL_LIBRARY_VERSION, 1,
+     [Define if rl_library_version is available in libreadline.])],
+[AC_MSG_RESULT(no)])
+
+CHECK_C23_EMBED
+CHECK_ZIPFS
+CHECK_EMBED_BINARY
+CHECK_TCL_STATICLIBRARY
+
+# Define constants for each embedding method
+AC_DEFINE([EMBED_METHOD_C23_EMBED], [1], [C23 #embed directive])
+AC_DEFINE([EMBED_METHOD_ZIPFS], [2], [Tcl zipfs])
+AC_DEFINE([EMBED_METHOD_OBJCOPY], [3], [objcopy binary embedding])
+AC_DEFINE([EMBED_METHOD_TCL_FINDLIBRARY], [4], [Runtime Tcl library search])
+
+# Allow override of embedding method for testing
+AC_ARG_WITH([initscripts-method],
+    [AS_HELP_STRING([--with-initscripts-method=METHOD],
+        [force specific method for loading init scripts (c23_embed, zipfs, objcopy, or tcl_findLibrary)])],
+    [with_initscripts_method=$withval],
+    [with_initscripts_method=auto])
+
+# Determine embedding method priority: C23 > zipfs > objcopy
+AC_MSG_CHECKING([for method to load init scripts])
+if test "$with_initscripts_method" != "auto"; then
+    # User specified a method - validate and use it
+    case "$with_initscripts_method" in
+        c23_embed)
+            if test "$have_c23_embed" = "yes"; then
+                USE_EMBED_METHOD=c23_embed
+                USE_EMBED_METHOD_VALUE=1
+            else
+                AC_MSG_ERROR([--with-initscripts-method=c23_embed requested but C23 @%:@embed not supported])
+            fi
+            ;;
+        zipfs)
+            if test "$have_zipfs" = "yes"; then
+                USE_EMBED_METHOD=zipfs
+                USE_EMBED_METHOD_VALUE=2
+            else
+                AC_MSG_ERROR([--with-initscripts-method=zipfs requested but zipfs not available])
+            fi
+            ;;
+        objcopy)
+            if test "$have_embed_binary" = "yes"; then
+                USE_EMBED_METHOD=objcopy
+                USE_EMBED_METHOD_VALUE=3
+            else
+                AC_MSG_ERROR([--with-initscripts-method=objcopy requested but objcopy embedding not supported])
+            fi
+            ;;
+        tcl_findLibrary)
+            USE_EMBED_METHOD=tcl_findLibrary
+            USE_EMBED_METHOD_VALUE=4
+            ;;
+        *)
+            AC_MSG_ERROR([--with-initscripts-method must be one of: c23_embed, zipfs, objcopy, tcl_findLibrary])
+            ;;
+    esac
+else
+    # Auto-detect best available method
+    if test "$have_c23_embed" = "yes"; then
+        USE_EMBED_METHOD=c23_embed
+        USE_EMBED_METHOD_VALUE=1
+    elif test "$have_zipfs" = "yes"; then
+        USE_EMBED_METHOD=zipfs
+        USE_EMBED_METHOD_VALUE=2
+    elif test "$have_embed_binary" = "yes"; then
+        USE_EMBED_METHOD=objcopy
+        USE_EMBED_METHOD_VALUE=3
+    else
+        USE_EMBED_METHOD=tcl_findLibrary
+        USE_EMBED_METHOD_VALUE=4
+    fi
+fi
+AC_MSG_RESULT([$USE_EMBED_METHOD])
+AC_SUBST(USE_EMBED_METHOD)
+AC_DEFINE_UNQUOTED([USE_EMBED_METHOD], [$USE_EMBED_METHOD_VALUE],
+    [Method used to load init scripts])
+
+# Restore LIBS and CFLAGS
+LIBS="$SAVE_LIBS"
+CFLAGS="$SAVE_CFLAGS"
+
+#--------------------------------------------------------------------
+# Options to build statically-linked standalone applications
+#--------------------------------------------------------------------
+
+AC_ARG_ENABLE([tclshrl],
+    [AS_HELP_STRING([--enable-tclshrl],
+        [build statically-linked tclshrl standalone application])],
+    [enable_tclshrl=$enableval],
+    [enable_tclshrl=no])
+
+AC_ARG_ENABLE([wishrl],
+    [AS_HELP_STRING([--enable-wishrl],
+        [build statically-linked wishrl standalone application (requires Tk)])],
+    [enable_wishrl=$enableval],
+    [enable_wishrl=no])
+
+# Check if wishrl was requested but Tk is not available
+if test "$enable_wishrl" = "yes" -a "$no_tk" = "true"; then
+    AC_MSG_ERROR([--enable-wishrl requires Tk, but --without-tk was specified or Tk was not found])
+fi
+
+# Set up variables for Makefile
+TCLSHRL_BINARIES=""
+WISHRL_BINARIES=""
+
+if test "$enable_tclshrl" = "yes"; then
+    TCLSHRL_BINARIES="tclshrl\$(EXEEXT)"
+fi
+
+if test "$enable_wishrl" = "yes"; then
+    WISHRL_BINARIES="wishrl\$(EXEEXT)"
+fi
+
+AC_SUBST(TCLSHRL_BINARIES)
+AC_SUBST(WISHRL_BINARIES)
 
 #--------------------------------------------------------------------
 # Setup a *Config.sh.in configuration file.
@@ -292,7 +462,7 @@ AC_CHECK_FUNCS([sigaction])
 # substituting the AC variables in. Include these here.
 #--------------------------------------------------------------------
 
-AC_CONFIG_FILES([Makefile pkgIndex.tcl generic/tclreadline.h doc/tclreadline.n])
+AC_CONFIG_FILES([Makefile pkgIndex.tcl generic/tclreadline.h doc/tclreadline.n library/tclreadlineInit.tcl])
 #AC_CONFIG_FILES([sampleConfig.sh])
 AC_CONFIG_HEADERS([generic/config.h])
 
@@ -300,5 +470,7 @@ AC_CONFIG_HEADERS([generic/config.h])
 # Finally, substitute all of the various values into the files
 # specified with AC_CONFIG_FILES.
 #--------------------------------------------------------------------
+
+AC_SUBST(TCL_INCLUDE_SPEC)
 
 AC_OUTPUT

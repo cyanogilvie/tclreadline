@@ -11,6 +11,15 @@
 #ifndef TCLREADLINE_H_
 #define TCLREADLINE_H_
 
+#if HAVE_CONFIG_H
+# include "config.h"
+#endif
+
+#ifdef NOSTUBS
+#undef USE_TCL_STUBS
+#undef USE_TK_STUBS
+#endif
+
 #include <tcl.h>
 
 #if (TCL_MAJOR_VERSION < 8) || (TCL_MAJOR_VERSION == 8 && TCL_MINOR_VERSION < 7)

@@ -8,10 +8,6 @@
   * This software is copyright under the BSD license.
   * ================================================================== */
 
-#ifdef HAVE_CONFIG_H
-#  include "config.h"
-#endif
-
 #include "tclreadline.h"
 #include <stdio.h>
 #include <stdlib.h>
@@ -53,7 +49,6 @@ extern char* EXECUTING_MACRO_NAME;
 #endif
 
 #include "tclreadline.h"
-static const char* tclrl_library = TCLRL_LIBRARY;
 static const char* tclrl_version_str = TCLRL_VERSION_STR;
 static const char* tclrl_patchlevel_str = TCLRL_PATCHLEVEL_STR;
 
@@ -626,9 +621,6 @@ Tclreadline_Init(Tcl_Interp *interp)
             (char*) &tclrl_history_length, TCL_LINK_INT)))
         return status;
 
-    if (TCL_OK != (status = Tcl_LinkVar(interp, "::tclreadline::library",
-            (char*) &tclrl_library, TCL_LINK_STRING | TCL_LINK_READ_ONLY)))
-        return status;
     if (TCL_OK != (status = Tcl_LinkVar(interp, "::tclreadline::version",
             (char*) &tclrl_version_str, TCL_LINK_STRING | TCL_LINK_READ_ONLY)))
         return status;
@@ -639,9 +631,6 @@ Tclreadline_Init(Tcl_Interp *interp)
             (char*) &tclrl_license, TCL_LINK_STRING | TCL_LINK_READ_ONLY)))
         return status;
 
-    if (TCL_OK != (status = Tcl_LinkVar(interp, "tclreadline_library",
-            (char*) &tclrl_library, TCL_LINK_STRING | TCL_LINK_READ_ONLY)))
-        return status;
     if (TCL_OK != (status = Tcl_LinkVar(interp, "tclreadline_version",
             (char*) &tclrl_version_str, TCL_LINK_STRING | TCL_LINK_READ_ONLY)))
         return status;

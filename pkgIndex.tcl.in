@@ -29,10 +29,17 @@ package ifneeded @PACKAGE_NAME@ @PACKAGE_VERSION@ \
 
                 ::tclreadline::readline customcompleter ::tclreadline::ScriptCompleter
 
-                set ::auto_index(::tclreadline::ScriptCompleter) \
-                    [list source [file normalize [file join $dir tclreadlineCompleter.tcl]]]
+                if {[file readable [file join $dir library tclreadlineSetup.tcl]]} {
+                    set ::auto_index(::tclreadline::ScriptCompleter) \
+                        [list source [file normalize [file join $dir library tclreadlineCompleter.tcl]]]
 
-                source [file join $dir tclreadlineSetup.tcl]
+                    source [file join $dir library tclreadlineSetup.tcl]
+                } else {
+                    set ::auto_index(::tclreadline::ScriptCompleter) \
+                        [list source [file normalize [file join $dir tclreadlineCompleter.tcl]]]
+
+                    source [file join $dir tclreadlineSetup.tcl]
+                }
                 return
             }
         }

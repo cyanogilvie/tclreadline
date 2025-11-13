@@ -105,7 +105,7 @@ BuildInfoObjCmd(
 	Tcl_WrongNumArgs(interp, 1, objv, "?option?");
 	return TCL_ERROR;
     } else if (objc < 2) {
-	Tcl_SetObjResult(interp, Tcl_NewStringObj(buildData, TCL_INDEX_NONE));
+	Tcl_SetObjResult(interp, Tcl_NewStringObj(buildData, -1));
 	return TCL_OK;
     }
 
@@ -123,7 +123,7 @@ BuildInfoObjCmd(
 	if ((p = strchr(buildData, '+')) != NULL) {
 	    memcpy(buf, buildData, p - buildData);
 	    buf[p - buildData] = '\0';
-	    Tcl_SetObjResult(interp, Tcl_NewStringObj(buf, TCL_INDEX_NONE));
+	    Tcl_SetObjResult(interp, Tcl_NewStringObj(buf, -1));
 	}
 	return TCL_OK;
     case ID_VERSION:
@@ -135,7 +135,7 @@ BuildInfoObjCmd(
 	if (p != NULL) {
 	    memcpy(buf, buildData, p - buildData);
 	    buf[p - buildData] = '\0';
-	    Tcl_SetObjResult(interp, Tcl_NewStringObj(buf, TCL_INDEX_NONE));
+	    Tcl_SetObjResult(interp, Tcl_NewStringObj(buf, -1));
 	}
 	return TCL_OK;
     case ID_COMMIT:
@@ -143,9 +143,9 @@ BuildInfoObjCmd(
 	    if ((q = strchr(p++, '.')) != NULL) {
 		memcpy(buf, p, q - p);
 		buf[q - p] = '\0';
-		Tcl_SetObjResult(interp, Tcl_NewStringObj(buf, TCL_INDEX_NONE));
+		Tcl_SetObjResult(interp, Tcl_NewStringObj(buf, -1));
 	    } else {
-		Tcl_SetObjResult(interp, Tcl_NewStringObj(p, TCL_INDEX_NONE));
+		Tcl_SetObjResult(interp, Tcl_NewStringObj(p, -1));
 	    }
 	}
 	return TCL_OK;
@@ -161,9 +161,9 @@ BuildInfoObjCmd(
 		if ((q = strchr(p, '.')) != NULL) {
 		    memcpy(buf, p, q - p);
 		    buf[q - p] = '\0';
-		    Tcl_SetObjResult(interp, Tcl_NewStringObj(buf, TCL_INDEX_NONE));
+		    Tcl_SetObjResult(interp, Tcl_NewStringObj(buf, -1));
 		} else {
-		    Tcl_SetObjResult(interp, Tcl_NewStringObj(p, TCL_INDEX_NONE));
+		    Tcl_SetObjResult(interp, Tcl_NewStringObj(p, -1));
 		}
 		return TCL_OK;
 	    }
@@ -182,7 +182,7 @@ BuildInfoObjCmd(
 		    }
 		    memcpy(buf, p, q - p);
 		    buf[q - p] = '\0';
-		    Tcl_SetObjResult(interp, Tcl_NewStringObj(buf, TCL_INDEX_NONE));
+		    Tcl_SetObjResult(interp, Tcl_NewStringObj(buf, -1));
 		} else {
 		    Tcl_SetObjResult(interp, Tcl_NewBooleanObj(1));
 		}

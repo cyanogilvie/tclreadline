@@ -1,13 +1,43 @@
 /* generic/config.h.in.  Generated from configure.ac by autoheader.  */
 
+/* Define if rl_cleanup_after_signal is resolved in libreadline. */
+#undef CLEANUP_AFTER_SIGNAL
+
+/* C23 #embed directive */
+#undef EMBED_METHOD_C23_EMBED
+
+/* objcopy binary embedding */
+#undef EMBED_METHOD_OBJCOPY
+
+/* Runtime Tcl library search */
+#undef EMBED_METHOD_TCL_FINDLIBRARY
+
+/* Tcl zipfs */
+#undef EMBED_METHOD_ZIPFS
+
 /* Defined when cygwin/mingw does not support EXCEPTION DISPOSITION */
 #undef EXCEPTION_DISPOSITION
+
+/* Define if EXECUTING_MACRO_NAME is resolved in libreadline. */
+#undef EXECUTING_MACRO_HACK
+
+/* Define to the name of the executing macro variable in libreadline. */
+#undef EXECUTING_MACRO_NAME
+
+/* Define if rl_extend_line_buffer is resolved in libreadline. */
+#undef EXTEND_LINE_BUFFER
+
+/* Define if compiler supports C23 #embed directive */
+#undef HAVE_C23_EMBED
 
 /* Defined when compiler supports casting to union type. */
 #undef HAVE_CAST_TO_UNION
 
 /* Is 'DIR64' in <sys/types.h>? */
 #undef HAVE_DIR64
+
+/* Define if toolchain supports objcopy embedding */
+#undef HAVE_EMBED_BINARY
 
 /* Compiler support for module scope symbols */
 #undef HAVE_HIDDEN
@@ -23,6 +53,9 @@
 
 /* Define to 1 if you have the `open64' function. */
 #undef HAVE_OPEN64
+
+/* Define if rl_library_version is available in libreadline. */
+#undef HAVE_RL_LIBRARY_VERSION
 
 /* Define to 1 if you have the `sigaction' function. */
 #undef HAVE_SIGACTION
@@ -57,6 +90,9 @@
 /* Define to 1 if you have the <sys/types.h> header file. */
 #undef HAVE_SYS_TYPES_H
 
+/* Define if Tcl has zipfs support */
+#undef HAVE_TCL_STATICLIBRARY
+
 /* Is off64_t in <sys/types.h>? */
 #undef HAVE_TYPE_OFF64_T
 
@@ -65,6 +101,9 @@
 
 /* Defined when cygwin/mingw ignores VOID define in winnt.h */
 #undef HAVE_WINNT_IGNORE_VOID
+
+/* Define if Tcl has zipfs support */
+#undef HAVE_ZIPFS
 
 /* Are we building against Mac OS X TkAqua? */
 #undef MAC_OSX_TK
@@ -121,6 +160,9 @@
 
 /* Is 'Tcl_Size' in <tcl.h>? */
 #undef Tcl_Size
+
+/* Method used to load init scripts */
+#undef USE_EMBED_METHOD
 
 /* Use TclOO stubs */
 #undef USE_TCLOO_STUBS

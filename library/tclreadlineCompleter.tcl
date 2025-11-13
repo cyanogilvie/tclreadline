@@ -114,7 +114,9 @@ namespace eval tclreadline {
             }]
         }
     } else { ;# !$trace_procs
-        catch {rename ::tclreadline::proc ""}
+        if {[llength [info commands ::tclreadline::proc]]} {
+            rename ::tclreadline::proc {}
+        }
     }
 
     if {[info exists trace] && $trace} {
