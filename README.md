@@ -42,11 +42,12 @@ Before trying to compile tclreadline you should do the following things:
    tclreadline uses the gnu readline callback handler, which
    wasn't implemented in early releases.
 
-3. Follow the usual TEA build procedure: ```sh
-./configure
-make
-make install
-```
+3. Follow the usual TEA build procedure:
+   ```sh
+   ./configure
+   make
+   make install
+   ```
    You may have to specify the location of your tcl installation
    if it is not in a standard location. You can do this with a
    `--with-tcl=DIR` option to configure, where DIR is the location
