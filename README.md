@@ -33,7 +33,7 @@ This release will probably only build under UNIX (Linux).
 
 Before trying to compile tclreadline you should do the following things:
 
-1. Make sure you have tcl 8.0 or higher. 
+1. Make sure you have tcl 8.0 or higher.
    tclreadline relies on a proper tcl installation:
    It uses the tclConfig.sh file, which should reside somewhere
    in /usr/local/lib/ or /usr/local/lib/tcl8.0/...
@@ -42,8 +42,16 @@ Before trying to compile tclreadline you should do the following things:
    tclreadline uses the gnu readline callback handler, which
    wasn't implemented in early releases.
 
-3. Follow the instructions in README.{your-OS}, if there isn't one,
-   adapt the README.Linux instructions.
+3. Follow the usual TEA build procedure: ```sh
+./configure
+make
+make install
+```
+   You may have to specify the location of your tcl installation
+   if it is not in a standard location. You can do this with a
+   `--with-tcl=DIR` option to configure, where DIR is the location
+   of the tclConfig.sh file. To build without Tk (which is only needed
+   for wishrl) you can use the `--without-tk` option.
 
 4. Optionally (or additionally) you can build the executables
    tclshrl and / or wishrl which are a readline enhanced replacement
@@ -52,14 +60,6 @@ Before trying to compile tclreadline you should do the following things:
         ./configure --enable-tclshrl --enable-wishrl
 
     (or one of these if you want just tclshrl or wishrl).
-    NOTE that these executables need an installed version of
-    tclreadline because they need some script files to run
-    so you can't test tclshrl/wishrl before installing
-    the tclreadline scripts.
-
-    Building statically linked executables is DISCOURAGED
-    but necessary on systems which don't support shared libs.
-
 
 Using tclreadline for interactive tcl scripting.
 ================================================
@@ -70,4 +70,3 @@ like wish, you should copy the file sample.tclshrc to $HOME/.wishrc
 installed tclreadline properly, you are just ready to start:
 start your favorite interpreter. The tclreadlineSetup.tcl script
 does the rest.
-

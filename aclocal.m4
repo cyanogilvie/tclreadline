@@ -33,11 +33,11 @@ AC_DEFUN([HIGHEST_C_STANDARD], [
     # Test standards in descending order
     for std in c23 c17 c11 c99 c90; do
         CFLAGS="-std=$std"
-        AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[]], [[]])],
-            [C_STD_VERSION="$std"
-             C_STD_CFLAGS="-std=$std"
-             break],
-            [])
+        AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[]], [[]])], [
+            C_STD_VERSION="$std"
+            C_STD_CFLAGS="-std=$std"
+            break
+        ], [])
     done
 
     # Restore CFLAGS and LIBS
@@ -66,125 +66,223 @@ AC_DEFUN([HIGHEST_C_STANDARD], [
 #
 # Results:
 #   Defines HAVE_C23_EMBED if #embed is supported
+#   Sets the variable have_c23_embed to "yes" or "no"
 #------------------------------------------------------------------------
 AC_DEFUN([CHECK_C23_EMBED], [
     AC_MSG_CHECKING([if compiler supports @%:@embed directive])
 
     # Create a temporary test file to embed
-    echo "test" > conftest_embed.txt
+    echo -n "test" > conftest_embed.txt
 
-    AC_COMPILE_IFELSE([AC_LANG_SOURCE([[
-        const char embedded_data@<:@@:>@ = {
-        @%:@embed "conftest_embed.txt"
-        , 0
+    AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[
+        const char embedded_data[] = {
+        #embed "conftest_embed.txt"
+            ,0
         };
-        int main(void) { return 0; }
-    ]])],
-    [AC_MSG_RESULT([yes])
-     AC_DEFINE([HAVE_C23_EMBED], [1],
-         [Define if compiler supports C23 @%:@embed directive])
-     have_c23_embed=yes],
-    [AC_MSG_RESULT([no])
-     have_c23_embed=no])
+    ]], [[
+        return sizeof(embedded_data) != 5;
+    ]])], [
+        AC_MSG_RESULT([yes])
+        AC_DEFINE([HAVE_C23_EMBED], [1], [Define if compiler supports C23 @%:@embed directive])
+        have_c23_embed=yes
+    ], [
+        AC_MSG_RESULT([no])
+        have_c23_embed=no
+    ])
 
     # Clean up
     rm -f conftest_embed.txt
 ])
 
+#------------------------------------------------------------------------
+# CHECK_ZIPFS
+#
+#  Checks if the Tcl library has zipfs support.
+#
+# Arguments:
+#  None
+#
+# Results:
+#  Defines HAVE_ZIPFS if zipfs support is available
+#  Sets the variable have_zipfs to "yes" or "no"
+#------------------------------------------------------------------------
 AC_DEFUN([CHECK_ZIPFS], [
     AC_MSG_CHECKING([for zipfs support in Tcl])
-    AC_LINK_IFELSE([AC_LANG_SOURCE([[
+    AC_LINK_IFELSE([AC_LANG_PROGRAM([[
         #undef USE_TCL_STUBS 
         #include <tcl.h>
-        int main(void) { TclZipfs_Mount(NULL, NULL, NULL, NULL); return 0; }
-    ]])],
-    [AC_MSG_RESULT([yes])
-     AC_DEFINE([HAVE_ZIPFS], [1],
-         [Define if Tcl has zipfs support])
-     have_zipfs=yes],
-    [AC_MSG_RESULT([no])
-     have_zipfs=no])
+    ]], [[
+        TclZipfs_Mount(NULL, NULL, NULL, NULL);
+        return 0;
+    ]])], [
+        AC_MSG_RESULT([yes])
+        AC_DEFINE([HAVE_ZIPFS], [1], [Define if Tcl has zipfs support])
+        have_zipfs=yes
+    ], [
+        AC_MSG_RESULT([no])
+        have_zipfs=no
+    ])
 ])
 
+#------------------------------------------------------------------------
+# CHECK_EMBED_BINARY
+#
+#   Checks if the toolchain supports embedding binary files into object files
+#
+# Arguments:
+#   None
+#
+# Results:
+#   Sets the following variables:
+#     OBJCOPY - The objcopy tool found, or "no" if not found
+#     have_embed_binary - "yes" if embedding is supported, "no" otherwise
+#
+#------------------------------------------------------------------------
 AC_DEFUN([CHECK_EMBED_BINARY], [
     # Check if objcopy is available
     AC_CHECK_TOOL([OBJCOPY], [objcopy], [no])
+    AC_SUBST(OBJCOPY)
 
+    have_embed_binary=no
     AC_MSG_CHECKING([whether the toolchain supports embedding files in objects])
-
     if test "$OBJCOPY" != "no"; then
         # Step 1: Create an empty object file
         if $CC -x c -c -o conftest_embed.o /dev/null >&5; then
             # Step 2: Try to embed data using objcopy
-            if echo -ne 'working\0' | $OBJCOPY --add-section .embed=/dev/stdin \
+            if echo -ne 'working\0' | $OBJCOPY \
+                --add-section .embed=/dev/stdin \
                 --set-section-flags .embed=data,alloc,load \
                 --add-symbol _embed_data=.embed:0,global,object \
-                conftest_embed.o 2>&5; then
-
+                conftest_embed.o 2>&5
+            then
                 # Step 3: Try to compile and link a test program that uses the embedded data
-                cat > conftest_embed_test.c <<"EOF"
-#include <string.h>
-extern const char _embed_data;
-const char* embed_data = &_embed_data;
-int main(void) {
-    return strcmp(embed_data, "working") != 0;
-}
-EOF
-                if $CC -o conftest_embed_test$EXEEXT conftest_embed.o conftest_embed_test.c 2>&5 >&5; then
-                    # Step 4: Try to run the test program (if not cross-compiling)
-                    if test "$cross_compiling" != "yes"; then
-                        if ./conftest_embed_test$EXEEXT >&5; then
+                hold_cflags=$CFLAGS;  CFLAGS=""
+                hold_ldlags=$LDFLAGS; LDFLAGS=""
+                hold_libs=$LIBS;      LIBS="conftest_embed.o"
+                AC_LINK_IFELSE([AC_LANG_PROGRAM([[
+                    #include <string.h>
+                    extern const char _embed_data;
+                    const char* embed_data = &_embed_data;
+                ]],[[
+                    return strcmp(embed_data, "working") != 0;
+                ]])], [
+                    if test "$cross_compiling" = "yes"; then
+                        # Cross-compiling: assume it works if we got this far
+                        AC_MSG_RESULT([yes (cross-compiling, assumed)])
+                        have_embed_binary=yes
+                    else
+                        if ./conftest$EXEEXT >&5; then
                             AC_MSG_RESULT([yes])
-                            AC_DEFINE([HAVE_EMBED_BINARY], [1],
-                                [Define if toolchain supports objcopy embedding])
                             have_embed_binary=yes
                         else
                             AC_MSG_RESULT([no (runtime test failed)])
-                            have_embed_binary=no
                         fi
-                    else
-                        # Cross-compiling: assume it works if we got this far
-                        AC_MSG_RESULT([yes (cross-compiling, assumed)])
-                        AC_DEFINE([HAVE_EMBED_BINARY], [1],
-                            [Define if toolchain supports objcopy embedding])
-                        have_embed_binary=yes
                     fi
-                else
+                ], [
                     AC_MSG_RESULT([no (linking failed)])
-                    have_embed_binary=no
-                fi
+                ])
+                LIBS=$hold_libs
+                LDFLAGS=$hold_ldlags
+                CFLAGS=$hold_cflags
             else
                 AC_MSG_RESULT([no (objcopy failed)])
-                have_embed_binary=no
             fi
+
+            # Clean up
+            rm -f conftest_embed.o
         else
             AC_MSG_RESULT([no (compilation failed)])
-            have_embed_binary=no
         fi
     else
         AC_MSG_RESULT([no (objcopy not found)])
-        have_embed_binary=no
     fi
-
-    # Clean up
-    #rm -f conftest_embed.o conftest_embed_test.c conftest_embed_test$EXEEXT
-    rm -f conftest_embed.o conftest_embed_test.c conftest_embed_test$EXEEXT
-
-    AC_SUBST(OBJCOPY)
 ])
 
-AC_DEFUN([CHECK_TCL_STATICLIBRARY], [
-    AC_MSG_CHECKING([whether Tcl_StaticPackage is spelled Tcl_StaticLibrary in this Tcl])
-    AC_LINK_IFELSE([AC_LANG_SOURCE([[
+#------------------------------------------------------------------------
+# SHIM_TCL_STATICLIBRARY
+#
+#  Defines Tcl_StaticLibrary as Tcl_StaticPackage for old Tcl versions
+#
+# Arguments:
+#  None
+#
+# Results:
+#  Defines Tcl_StaticLibrary as Tcl_StaticPackage if needed for
+#  compatibility with older Tcl releases.
+#------------------------------------------------------------------------
+AC_DEFUN([SHIM_TCL_STATICLIBRARY], [
+    AC_MSG_CHECKING([whether Tcl_StaticLibrary is spelled Tcl_StaticPackage in this Tcl])
+    AC_LINK_IFELSE([AC_LANG_PROGRAM([[
         #undef USE_TCL_STUBS
         #include <tcl.h>
-        int main(void) { Tcl_StaticLibrary(NULL, NULL, NULL, NULL); return 0; }
-    ]])],
-    [AC_MSG_RESULT([yes])
-     AC_DEFINE([HAVE_TCL_STATICLIBRARY], [1],
-         [Define if Tcl has zipfs support])
-     have_tcl_staticlibrary=yes],
-    [AC_MSG_RESULT([no])
-     have_tcl_staticlibrary=no])
+    ]], [[
+        Tcl_StaticLibrary(NULL, NULL, NULL, NULL);
+        return 0;
+    ]])], [
+        AC_MSG_RESULT([no])
+    ], [
+        AC_MSG_RESULT([yes])
+        AC_DEFINE([Tcl_StaticLibrary], [Tcl_StaticPackage], [Define as Tcl_StaticPackage for old Tcl versions])
+    ])
 ])
+
+#------------------------------------------------------------------------
+# CHECK_BUILD_TCLSH
+#
+#  Checks if the build environment can run the Tcl shell (tclsh)
+#
+# Arguments:
+#   None
+#
+# Results:
+#   Sets HAVE_BUILD_TCLSH to "yes" or "no"
+#   Sets BUILD_TCLSH to the path of the tclsh program (if HAVE_BUILD_TCLSH is "yes")
+#------------------------------------------------------------------------
+AC_DEFUN([CHECK_BUILD_TCLSH], [
+    AC_MSG_CHECKING([whether the build environment can run tcl scripts])
+    HAVE_BUILD_TCLSH=no
+
+    if test -n "$BUILD_TCLSH"; then
+        try_tclsh=$BUILD_TCLSH
+    elif test -x "$TCLSH_PROG"; then
+        try_tclsh=$TCLSH_PROG
+    else
+        try_tclsh=$(which tclsh 2>/dev/null)
+    fi
+
+    if test "$(echo "puts working" | "$try_tclsh" 2>&5)" = "working"; then
+        HAVE_BUILD_TCLSH=yes
+        BUILD_TCLSH=$try_tclsh
+        AC_SUBST(BUILD_TCLSH)
+    fi
+    AC_MSG_RESULT([$HAVE_BUILD_TCLSH: ${BUILD_TCLSH:-not found}])
+    AC_SUBST(HAVE_BUILD_TCLSH)
+])
+
+#------------------------------------------------------------------------
+#
+# TCL_SCRIPT_IFELSE
+#
+#  Runs a Tcl script and executes one of two code blocks depending on success
+#  and whether a TCLSH is available in the build environment (as determined by
+#  CHECK_BUILD_TCLSH).
+#
+# Arguments:
+#  $1 - Tcl script to run
+#  $2 - Code block to execute if the script succeeds
+#  $3 - Code block to execute if the script fails
+#
+# Results:
+#  Executes the appropriate code block
+#------------------------------------------------------------------------
+AC_DEFUN([TCL_SCRIPT_IFELSE], [[
+    prog="if {[catch {$1} e]} {puts stderr \$e; exit 1}"
+    if test $HAVE_BUILD_TCLSH = "yes" && echo "$prog" | "$BUILD_TCLSH" 2>&5; then
+        eval "$2"
+    else
+        echo "failed tcl script was:" >&5
+        echo "$prog" >&5
+        eval "$3"
+    fi
+]])
 

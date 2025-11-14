@@ -1,18 +1,21 @@
-/* generic/config.h.in.  Generated from configure.ac by autoheader.  */
+/* config.h.in.  Generated from configure.ac by autoheader.  */
 
 /* Define if rl_cleanup_after_signal is resolved in libreadline. */
 #undef CLEANUP_AFTER_SIGNAL
 
-/* C23 #embed directive */
+/* C23 #embed directive ID */
 #undef EMBED_METHOD_C23_EMBED
 
-/* objcopy binary embedding */
+/* char array literal ID */
+#undef EMBED_METHOD_CHAR_ARRAY
+
+/* Runtime Tcl library search ID */
+#undef EMBED_METHOD_FINDLIBRARY
+
+/* objcopy binary embedding ID */
 #undef EMBED_METHOD_OBJCOPY
 
-/* Runtime Tcl library search */
-#undef EMBED_METHOD_TCL_FINDLIBRARY
-
-/* Tcl zipfs */
+/* Tcl zipfs ID */
 #undef EMBED_METHOD_ZIPFS
 
 /* Defined when cygwin/mingw does not support EXCEPTION DISPOSITION */
@@ -35,9 +38,6 @@
 
 /* Is 'DIR64' in <sys/types.h>? */
 #undef HAVE_DIR64
-
-/* Define if toolchain supports objcopy embedding */
-#undef HAVE_EMBED_BINARY
 
 /* Compiler support for module scope symbols */
 #undef HAVE_HIDDEN
@@ -90,9 +90,6 @@
 /* Define to 1 if you have the <sys/types.h> header file. */
 #undef HAVE_SYS_TYPES_H
 
-/* Define if Tcl has zipfs support */
-#undef HAVE_TCL_STATICLIBRARY
-
 /* Is off64_t in <sys/types.h>? */
 #undef HAVE_TYPE_OFF64_T
 
@@ -137,6 +134,9 @@
    backward compatibility; new code need not use it. */
 #undef STDC_HEADERS
 
+/* Version string of tclreadline */
+#undef TCLRL_VERSION_STR
+
 /* Is this an optimized build? */
 #undef TCL_CFG_OPTIMIZED
 
@@ -160,6 +160,9 @@
 
 /* Is 'Tcl_Size' in <tcl.h>? */
 #undef Tcl_Size
+
+/* Define as Tcl_StaticPackage for old Tcl versions */
+#undef Tcl_StaticLibrary
 
 /* Method used to load init scripts */
 #undef USE_EMBED_METHOD

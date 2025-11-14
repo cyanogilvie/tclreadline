@@ -50,7 +50,7 @@ extern char* EXECUTING_MACRO_NAME;
 
 #include "tclreadline.h"
 static const char* tclrl_version_str = TCLRL_VERSION_STR;
-static const char* tclrl_patchlevel_str = TCLRL_PATCHLEVEL_STR;
+static const char* tclrl_patchlevel_str = PACKAGE_VERSION;
 
 #define MALLOC(size) malloc(size)
 #define FREE(ptr) (free(ptr), ptr = NULL)

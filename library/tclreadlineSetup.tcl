@@ -7,6 +7,10 @@
 # This software is copyright under the BSD license.
 # ---
 
+# Prevent double loading
+if {[info exists tclreadline::loaded]} return
+namespace eval tclreadline {variable loaded 1}
+
 rename unknown _unknown
 proc unknown args {
 

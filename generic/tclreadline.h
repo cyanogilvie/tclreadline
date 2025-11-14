@@ -16,8 +16,8 @@
 #endif
 
 #ifdef NOSTUBS
-#undef USE_TCL_STUBS
-#undef USE_TK_STUBS
+# undef USE_TCL_STUBS
+# undef USE_TK_STUBS
 #endif
 
 #include <tcl.h>
@@ -31,16 +31,17 @@
 # define TCL_SIZE_MODIFIER ""
 #endif
 
-#define TCLRL_LIBRARY        "@TCLRL_DIR@"
+static inline void replace_tclobj(Tcl_Obj** target, Tcl_Obj* replacement)
+{
+    Tcl_Obj*	old = *target;
 
-/* VERSION STRINGS */
-#define TCLRL_VERSION_STR    "@VERSION@"
-#define TCLRL_PATCHLEVEL_STR "@PATCHLEVEL_STR@"
-
-/* VERSION NUMBERS */
-#define TCLRL_MAJOR      @MAJOR@
-#define TCLRL_MINOR      @MINOR@
-#define TCLRL_PATCHLEVEL @PATCHLEVEL@
+    *target = replacement;
+    if (*target) Tcl_IncrRefCount(*target);
+    if (old) {
+        Tcl_DecrRefCount(old);
+        old = NULL;
+    }
+}
 
 #ifdef __cplusplus
 extern "C" {

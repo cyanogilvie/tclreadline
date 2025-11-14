@@ -5,8 +5,7 @@
 config.log
 config.status
 /pkgIndex.tcl
-/generic/config.h
-/generic/tclreadline.h
+/config.h
 /doc/tclreadline.n
 /Makefile
 autom4te.cache
