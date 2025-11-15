@@ -57,9 +57,9 @@ Before trying to compile tclreadline you should do the following things:
 4. Optionally (or additionally) you can build the executables
    tclshrl and / or wishrl which are a readline enhanced replacement
    for tclsh and wish. To compile these executable you should type
-
-        ./configure --enable-tclshrl --enable-wishrl
-
+   ```sh
+   ./configure --enable-tclshrl --enable-wishrl
+    ```
     (or one of these if you want just tclshrl or wishrl).
 
 Using tclreadline for interactive tcl scripting.
