@@ -130,13 +130,13 @@ AC_ARG_WITH([readline-library],
 
 # Get readline build flags from pkg-config or user-specified paths
 if test "$readline_includes" = "auto"; then
-	READLINE_CFLAGS=`pkg-config --cflags readline 2>/dev/null || echo ""`
+	READLINE_CFLAGS=`pkg-config --static --cflags readline 2>/dev/null || echo ""`
 else
 	READLINE_CFLAGS="-I$readline_includes"
 fi
 
 if test "$readline_library" = "auto"; then
-	READLINE_LIBS=`pkg-config --libs readline 2>/dev/null || echo "-lreadline"`
+	READLINE_LIBS=`pkg-config --static --libs readline 2>/dev/null || echo "-lreadline"`
 else
 	READLINE_LIBS="-L$readline_library -lreadline"
 fi
