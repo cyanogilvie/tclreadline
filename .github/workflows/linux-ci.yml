@@ -37,7 +37,7 @@ jobs:
       run: sudo make install
 
     - name: test
-      run: make test
+      run: make test TESTFLAGS="-file build-info.test"
 
     - name: dist
       run: make dist
