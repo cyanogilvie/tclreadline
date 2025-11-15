@@ -4,11 +4,12 @@ name: Linux CI
 
 # Controls when the action will run.
 on:
+  push
   # Triggers the workflow on push or pull request events but only for the master branch
-  push:
-    branches: [ master, tea ]
-  pull_request:
-    branches: [ master ]
+  #push:
+  #  branches: [ master, tea ]
+  #pull_request:
+  #  branches: [ master ]
 
 jobs:
   build:
