@@ -38,6 +38,47 @@ AC_CONFIG_AUX_DIR(tclconfig)
 TEA_PATH_TCLCONFIG
 TEA_LOAD_TCLCONFIG
 
+#--------------------------------------------------------------------
+# Options to build statically-linked standalone applications
+#--------------------------------------------------------------------
+
+AC_MSG_CHECKING([whether to build tclshrl])
+AC_ARG_ENABLE([tclshrl],
+    [AS_HELP_STRING([--enable-tclshrl],
+        [build statically-linked tclshrl standalone application])],
+    [enable_tclshrl=$enableval],
+    [enable_tclshrl=no])
+AC_MSG_RESULT([$enable_tclshrl])
+
+AC_MSG_CHECKING([whether to build wishrl])
+AC_ARG_ENABLE([wishrl],
+    [AS_HELP_STRING([--enable-wishrl],
+        [build statically-linked wishrl standalone application (requires Tk)])],
+    [enable_wishrl=$enableval],
+    [enable_wishrl=no])
+AC_MSG_RESULT([$enable_wishrl])
+
+#--------------------------------------------------------------------
+# Load the tkConfig.sh file if necessary (Tk extension)
+#--------------------------------------------------------------------
+
+if test "$enable_wishrl" = "no"; then
+	no_tk=true
+	# Ignore the --with-tk arg
+	AC_ARG_WITH([tk],
+	    [AS_HELP_STRING([--with-tk],
+	        [use Tk (ignored unless --enable-wishrl is given)])],
+	    [with_tk=no],
+	    [with_tk=no])
+else
+	if test "$with_tk" != "no"; then
+		TEA_PATH_TKCONFIG
+	    TEA_LOAD_TKCONFIG
+	else
+	    AC_MSG_ERROR([--enable-wishrl requires Tk, but --without-tk was specified])
+	fi
+fi
+
 #-----------------------------------------------------------------------
 # Handle the --prefix=... option by defaulting to what Tcl gave.
 # Must be called after TEA_LOAD_TCLCONFIG and before TEA_SETUP_COMPILER.
@@ -226,6 +267,11 @@ AC_CHECK_HEADERS([string.h])
 AC_CHECK_FUNCS([sigaction])
 
 #--------------------------------------------------------------------
+# Can we embed data in object files with objcopy?
+#--------------------------------------------------------------------
+CHECK_EMBED_BINARY
+
+#--------------------------------------------------------------------
 # Check for readline features
 # Use the same flags that will be used for building (PKG_LIBS, PKG_CFLAGS)
 #--------------------------------------------------------------------
@@ -313,9 +359,124 @@ AC_LINK_IFELSE([AC_LANG_PROGRAM([[
      [Define if rl_library_version is available in libreadline.])],
 [AC_MSG_RESULT(no)])
 
+CHECK_C23_EMBED
+CHECK_ZIPFS
+SHIM_TCL_STATICLIBRARY
+
+AC_MSG_CHECKING([Whether the build tclsh supports zipfs])
+TCL_SCRIPT_IFELSE([zipfs root], [
+    build_tclsh_supports_zipfs=yes
+], [
+    build_tclsh_supports_zipfs=no
+])
+AC_MSG_RESULT([$build_tclsh_supports_zipfs])
+
+# Define constants for each embedding method, to support #if testing like:
+#if USE_EMBED_METHOD == EMBED_METHOD_C23_EMBED
+METHOD_C23_EMBED_ID=10
+METHOD_ZIPFS_ID=11
+METHOD_OBJCOPY_ID=12
+METHOD_CHAR_ARRAY_ID=13
+METHOD_FINDLIBRARY_ID=14
+AC_DEFINE_UNQUOTED([EMBED_METHOD_C23_EMBED],   $METHOD_C23_EMBED_ID,   [C23 @%:@embed directive ID])
+AC_DEFINE_UNQUOTED([EMBED_METHOD_ZIPFS],       $METHOD_ZIPFS_ID,       [Tcl zipfs ID])
+AC_DEFINE_UNQUOTED([EMBED_METHOD_OBJCOPY],     $METHOD_OBJCOPY_ID,     [objcopy binary embedding ID])
+AC_DEFINE_UNQUOTED([EMBED_METHOD_CHAR_ARRAY],  $METHOD_CHAR_ARRAY_ID,  [char array literal ID])
+AC_DEFINE_UNQUOTED([EMBED_METHOD_FINDLIBRARY], $METHOD_FINDLIBRARY_ID, [Runtime Tcl library search ID])
+
+# Allow override of embedding method for testing
+AC_ARG_WITH([initscripts-method],
+    [AS_HELP_STRING([--with-initscripts-method=METHOD],
+        [force specific method for loading init scripts (c23_embed, zipfs, objcopy, char_array, or tcl_findLibrary)])],
+    [with_initscripts_method=$withval],
+    [with_initscripts_method=auto])
+
+# Determine embedding method priority: C23 > zipfs > objcopy
+AC_MSG_CHECKING([for method to load init scripts])
+if test "$with_initscripts_method" != "auto"; then
+    # User specified a method - validate and use it
+    case "$with_initscripts_method" in
+        c23_embed)
+            if test "$have_c23_embed" = "yes"; then
+                USE_EMBED_METHOD=c23_embed
+                USE_EMBED_METHOD_VALUE=$METHOD_C23_EMBED_ID
+            else
+                AC_MSG_ERROR([--with-initscripts-method=c23_embed requested but C23 @%:@embed not supported])
+            fi
+            ;;
+        zipfs)
+            if test "$have_zipfs" = "yes" -a "$HAVE_BUILD_TCLSH" = "yes" -a "$build_tclsh_supports_zipfs" = "yes"; then
+                USE_EMBED_METHOD=zipfs
+                USE_EMBED_METHOD_VALUE=$METHOD_ZIPFS_ID
+            else
+                AC_MSG_ERROR([--with-initscripts-method=zipfs requested but zipfs not available])
+            fi
+            ;;
+        objcopy)
+            if test "$have_embed_binary" = "yes"; then
+                USE_EMBED_METHOD=objcopy
+                USE_EMBED_METHOD_VALUE=$METHOD_OBJCOPY_ID
+            else
+                AC_MSG_ERROR([--with-initscripts-method=objcopy requested but objcopy embedding not supported])
+            fi
+            ;;
+        char_array)
+            if test "$HAVE_BUILD_TCLSH" = "yes"; then
+                USE_EMBED_METHOD=char_array
+                USE_EMBED_METHOD_VALUE=$METHOD_CHAR_ARRAY_ID
+            else
+                AC_MSG_ERROR([--with-initscripts-method=char_array requested but tclsh not available])
+            fi
+            ;;
+        tcl_findLibrary)
+            USE_EMBED_METHOD=tcl_findLibrary
+            USE_EMBED_METHOD_VALUE=$METHOD_FINDLIBRARY_ID
+            ;;
+        *)
+            AC_MSG_ERROR([--with-initscripts-method must be one of: c23_embed, zipfs, objcopy, char_array, or tcl_findLibrary])
+            ;;
+    esac
+else
+    # Auto-detect best available method
+    if test "$have_c23_embed" = "yes"; then
+        USE_EMBED_METHOD=c23_embed
+        USE_EMBED_METHOD_VALUE=$METHOD_C23_EMBED_ID
+    elif test "$have_zipfs" = "yes" -a "$HAVE_BUILD_TCLSH" = "yes" -a "$build_tclsh_supports_zipfs" = "yes"; then
+        USE_EMBED_METHOD=zipfs
+        USE_EMBED_METHOD_VALUE=$METHOD_ZIPFS_ID
+    elif test "$have_embed_binary" = "yes"; then
+        USE_EMBED_METHOD=objcopy
+        USE_EMBED_METHOD_VALUE=$METHOD_OBJCOPY_ID
+    elif test "$HAVE_BUILD_TCLSH" = "yes"; then
+        USE_EMBED_METHOD=char_array
+        USE_EMBED_METHOD_VALUE=$METHOD_CHAR_ARRAY_ID
+    else
+        USE_EMBED_METHOD=tcl_findLibrary
+        USE_EMBED_METHOD_VALUE=$METHOD_FINDLIBRARY_ID
+    fi
+fi
+AC_MSG_RESULT([$USE_EMBED_METHOD])
+AC_SUBST(USE_EMBED_METHOD)
+AC_DEFINE_UNQUOTED([USE_EMBED_METHOD], [$USE_EMBED_METHOD_VALUE], [Method used to load init scripts])
+
 # Restore LIBS and CFLAGS
 LIBS="$SAVE_LIBS"
 CFLAGS="$SAVE_CFLAGS"
+
+# Set up variables for Makefile
+TCLSHRL_BINARIES=""
+WISHRL_BINARIES=""
+
+if test "$enable_tclshrl" = "yes"; then
+    TCLSHRL_BINARIES="tclshrl\$(EXEEXT)"
+fi
+
+if test "$enable_wishrl" = "yes"; then
+    WISHRL_BINARIES="wishrl\$(EXEEXT)"
+fi
+
+AC_SUBST(TCLSHRL_BINARIES)
+AC_SUBST(WISHRL_BINARIES)
 
 #--------------------------------------------------------------------
 # Setup a *Config.sh.in configuration file.
