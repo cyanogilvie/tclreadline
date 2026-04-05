@@ -16,3 +16,8 @@ autom4te.cache
 /tags
 /tclshrl*
 /wishrl*
+subprojects/tcl/
+subprojects/tcl-*
+subprojects/libtommath-*
+subprojects/packagecache
+subprojects/.wraplock
