@@ -42,8 +42,11 @@ Before trying to compile tclreadline you should do the following things:
    tclreadline uses the gnu readline callback handler, which
    wasn't implemented in early releases.
 
-3. Follow the usual TEA build procedure:
+3. Build with either autotools (TEA) or meson:
+
+   **Autotools (TEA):**
    ```sh
+   autoconf    # Only needed if building from git, releases have configure baked in
    ./configure
    make
    make install
@@ -54,13 +57,33 @@ Before trying to compile tclreadline you should do the following things:
    of the tclConfig.sh file. To build without Tk (which is only needed
    for wishrl) you can use the `--without-tk` option.
 
+   **Meson:**
+   ```sh
+   meson setup build --buildtype=release
+   meson install -C build
+   ```
+   If Tcl is not found automatically, point pkg-config at it:
+   ```sh
+   PKG_CONFIG_PATH=/path/to/tcl/lib/pkgconfig meson setup build
+   ```
+   Meson can also build Tcl from source as a fallback if no
+   system Tcl is found (via the included subproject wraps).
+
 4. Optionally (or additionally) you can build the executables
    tclshrl and / or wishrl which are a readline enhanced replacement
-   for tclsh and wish. To compile these executable you should type
+   for tclsh and wish.
+
+   **Autotools:**
    ```sh
    ./configure --enable-tclshrl --enable-wishrl
-    ```
-    (or one of these if you want just tclshrl or wishrl).
+   ```
+
+   **Meson:**
+   ```sh
+   meson setup build -Dtclshrl=true -Dwishrl=true
+   ```
+
+   (or one of these if you want just tclshrl or wishrl).
 
 Using tclreadline for interactive tcl scripting.
 ================================================
